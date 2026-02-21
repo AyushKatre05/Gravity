@@ -251,3 +251,61 @@ pub async fn fetch_files(pool: &PgPool, project_id: Uuid) -> Result<Vec<FileEntr
 
     Ok(files)
 }
+
+pub async fn fetch_graph(pool: &PgPool, project_id: Uuid) -> Result<GraphData> {
+    struct DepRow {
+        source: String,
+        target: String,
+    }
+
+    let deps = sqlx::query_as!(
+        DepRow,
+        "SELECT source, target FROM dependencies WHERE project_id = $1",
+        project_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let files = sqlx::query_scalar!(
+        "SELECT path FROM files WHERE project_id = $1",
+        project_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut nodes: Vec<GraphNode> = files
+        .into_iter()
+        .map(|path| {
+            let label = path
+                .rsplit('/')
+                .next()
+                .unwrap_or(&path)
+                .to_string();
+            GraphNode {
+                id: path.clone(),
+                label,
+                kind: "file".into(),
+            }
+        })
+        .collect();
+
+    let mut edges: Vec<GraphEdge> = Vec::new();
+
+    for dep in &deps {
+        if !nodes.iter().any(|n| n.id == dep.target) {
+            let label = dep.target.split("::").last().unwrap_or(&dep.target).to_string();
+            nodes.push(GraphNode {
+                id: dep.target.clone(),
+                label,
+                kind: "extern".into(),
+            });
+        }
+        edges.push(GraphEdge {
+            from: dep.source.clone(),
+            to: dep.target.clone(),
+            label: Some("uses".into()),
+        });
+    }
+
+    Ok(GraphData { nodes, edges })
+}
