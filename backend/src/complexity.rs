@@ -36,3 +36,18 @@ pub fn compute_complexity(func: &ParsedFunction) -> Result<usize> {
 
     Ok(count + 1) // baseline complexity = 1
 }
+
+pub fn compute_all(
+    files: &[crate::models::ParsedFile],
+) -> Vec<(String, String, usize)> {
+    let mut results = Vec::new();
+
+    for pf in files {
+        for func in &pf.functions {
+            let score = compute_complexity(func).unwrap_or(1);
+            results.push((pf.path.clone(), func.name.clone(), score));
+        }
+    }
+
+    results
+}
