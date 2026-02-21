@@ -16,3 +16,11 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool> {
 
     Ok(pool)
 }
+pub async fn run_migrations(pool: &PgPool) -> Result<()> {
+    sqlx::migrate!("./migrations")
+        .run(pool)
+        .await
+        .context("Failed to run migrations")?;
+
+    Ok(())
+}
