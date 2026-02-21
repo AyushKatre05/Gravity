@@ -238,3 +238,16 @@ pub async fn fetch_summary(pool: &PgPool, project_id: Uuid) -> Result<AnalysisSu
         architecture_notes: notes,
     })
 }
+
+pub async fn fetch_files(pool: &PgPool, project_id: Uuid) -> Result<Vec<FileEntry>> {
+    let files = sqlx::query_as!(
+        FileEntry,
+        r#"SELECT id, project_id, path, module_name, line_count, created_at
+           FROM files WHERE project_id = $1 ORDER BY path"#,
+        project_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(files)
+}
