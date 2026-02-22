@@ -93,3 +93,10 @@ pub struct AnalysisSummary {
     pub dead_code_candidates: Vec<String>,
     pub architecture_notes: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphNode {
+    pub id: String,
+    pub label: String,
+    pub kind: String, // "file" | "module" | "extern"
+}
