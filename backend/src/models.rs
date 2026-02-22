@@ -55,3 +55,91 @@ pub struct ComplexityEntry {
     pub score: i32,
     pub created_at: DateTime<Utc>,
 }
+
+// ─── Parsed (in-memory, pre-DB) ────────────────────────────────────────────
+
+/// Parsed file data before persisting to the database.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedFile {
+    pub path: String,
+    pub module_name: Option<String>,
+    pub line_count: usize,
+    pub functions: Vec<ParsedFunction>,
+    pub imports: Vec<String>,
+    pub structs: Vec<String>,
+}
+
+/// Parsed function data before persisting.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedFunction {
+    pub name: String,
+    pub line_start: usize,
+    pub line_end: usize,
+    pub is_public: bool,
+    pub is_async: bool,
+    pub body_source: String,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisSummary {
+    pub project_id: Uuid,
+    pub project_name: String,
+    pub total_files: i64,
+    pub total_functions: i64,
+    pub total_structs: i64,
+    pub total_imports: i64,
+    pub avg_complexity: f64,
+    pub dead_code_candidates: Vec<String>,
+    pub architecture_notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphNode {
+    pub id: String,
+    pub label: String,
+    pub kind: String, // "file" | "module" | "extern"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphEdge {
+    pub from: String,
+    pub to: String,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphData {
+    pub nodes: Vec<GraphNode>,
+    pub edges: Vec<GraphEdge>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplexityItem {
+    pub function_name: String,
+    pub file_path: String,
+    pub score: i32,
+    pub line_start: i32,
+    pub line_end: i32,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalyzeRequest {
+    pub project_name: Option<String>,
+    pub path: Option<String>,
+    pub github_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalyzeResponse {
+    pub project_id: Uuid,
+    pub files_analyzed: usize,
+    pub functions_found: usize,
+    pub message: String,
+
+    #[serde(skip)]
+    pub parsed_files_internal: Option<Vec<ParsedFile>>,
+    #[serde(skip)]
+    pub complexity_scores_internal: Option<Vec<(String, String, usize)>>,
+}
