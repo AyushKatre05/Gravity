@@ -122,3 +122,11 @@ pub struct ComplexityItem {
     pub line_start: i32,
     pub line_end: i32,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalyzeRequest {
+    pub project_name: Option<String>,
+    pub path: Option<String>,
+    pub github_url: Option<String>,
+}
