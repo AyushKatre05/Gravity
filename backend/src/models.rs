@@ -46,3 +46,12 @@ pub struct Dependency {
     pub kind: String,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ComplexityEntry {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub function_id: Uuid,
+    pub score: i32,
+    pub created_at: DateTime<Utc>,
+}
