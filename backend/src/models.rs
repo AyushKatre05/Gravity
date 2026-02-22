@@ -100,3 +100,10 @@ pub struct GraphNode {
     pub label: String,
     pub kind: String, // "file" | "module" | "extern"
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphEdge {
+    pub from: String,
+    pub to: String,
+    pub label: Option<String>,
+}
