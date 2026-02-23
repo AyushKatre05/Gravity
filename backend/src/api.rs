@@ -193,3 +193,25 @@ async fn complexity_handler(
 async fn health_handler() -> Json<serde_json::Value> {
     Json(serde_json::json!({ "status": "ok" }))
 }
+
+async fn resolve_project_id(
+    pool: &PgPool,
+    provided: Option<Uuid>,
+) -> Result<Uuid, (StatusCode, String)> {
+    if let Some(id) = provided {
+        return Ok(id);
+    }
+
+    sqlx::query_scalar!(
+        "SELECT id FROM projects ORDER BY updated_at DESC LIMIT 1"
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    .ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            "No projects found. Run POST /api/analyze first.".into(),
+        )
+    })
+}
