@@ -488,3 +488,40 @@ fn ComplexityPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
         </Suspense>
     }
 }
+
+#[component]
+fn StatCard(label: &'static str, value: String, icon: &'static str) -> impl IntoView {
+    view! {
+        <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="text-xl">{icon}</span>
+                <span class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted);">{label}</span>
+            </div>
+            <div class="text-3xl font-bold" style="color: var(--text-primary);">{value}</div>
+        </div>
+    }
+}
+
+#[component]
+fn LoadingCard() -> impl IntoView {
+    view! {
+        <div class="flex items-center justify-center py-24">
+            <div class="flex flex-col items-center gap-4">
+                <div class="w-10 h-10 rounded-full animate-spin"
+                     style="border: 3px solid var(--border); border-top-color: var(--accent);"></div>
+                <p class="text-sm" style="color: var(--text-muted);">"Loading data…"</p>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn EmptyState(icon: &'static str, title: &'static str, hint: &'static str) -> impl IntoView {
+    view! {
+        <div class="flex flex-col items-center justify-center py-24 gap-4">
+            <div class="text-5xl">{icon}</div>
+            <h3 class="text-xl font-semibold" style="color: var(--text-primary);">{title}</h3>
+            <p class="text-sm" style="color: var(--text-muted);">{hint}</p>
+        </div>
+    }
+}
