@@ -285,3 +285,126 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
         </div>
     }
 }
+
+#[component]
+fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
+    let files = create_resource(project_id, |pid| async move {
+        let url = match &pid {
+            Some(id) => format!("/api/files?project_id={id}"),
+            None => "/api/files".into(),
+        };
+        Request::get(&url).send().await.ok()?
+            .json::<Vec<FileEntry>>().await.ok()
+    });
+
+    view! {
+        <Suspense fallback=move || view! { <LoadingCard /> }>
+            {move || files.get().flatten().map(|fs| {
+                if fs.is_empty() {
+                    view! { <EmptyState icon="📁" title="No files found" hint="Run analysis first." /> }.into_view()
+                } else {
+                    view! {
+                        <div class="rounded-xl overflow-hidden" style="border: 1px solid var(--border);">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr style="background: var(--bg-secondary);">
+                                        <th class="text-left px-4 py-3 font-semibold" style="color: var(--text-muted);">"File Path"</th>
+                                        <th class="text-left px-4 py-3 font-semibold" style="color: var(--text-muted);">"Module"</th>
+                                        <th class="text-right px-4 py-3 font-semibold" style="color: var(--text-muted);">"Lines"</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {fs.iter().enumerate().map(|(i, f)| {
+                                        let bg = if i % 2 == 0 { "var(--bg-card)" } else { "var(--bg-secondary)" };
+                                        let row_style = format!("background: {};", bg);
+                                        view! {
+                                            <tr style=row_style>
+                                                <td class="px-4 py-2 mono" style="color: var(--accent-light); font-size: 0.8rem;">
+                                                    {f.path.clone()}
+                                                </td>
+                                                <td class="px-4 py-2" style="color: var(--text-muted);">
+                                                    {f.module_name.clone().unwrap_or_default()}
+                                                </td>
+                                                <td class="px-4 py-2 text-right mono" style="color: var(--text-primary);">
+                                                    {f.line_count}
+                                                </td>
+                                            </tr>
+                                        }
+                                    }).collect_view()}
+                                </tbody>
+                            </table>
+                        </div>
+                    }.into_view()
+                }
+            })}
+        </Suspense>
+    }
+}
+
+#[component]
+fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
+    let graph = create_resource(project_id, |pid| async move {
+        let url = match &pid {
+            Some(id) => format!("/api/graph?project_id={id}"),
+            None => "/api/graph".into(),
+        };
+        Request::get(&url).send().await.ok()?
+            .json::<GraphData>().await.ok()
+    });
+
+    view! {
+        <Suspense fallback=move || view! { <LoadingCard /> }>
+            {move || graph.get().flatten().map(|g| {
+                if g.nodes.is_empty() {
+                    return view! { <EmptyState icon="🔗" title="No graph data" hint="Run analysis first." /> }.into_view();
+                }
+
+                let nodes_json = serde_json::to_string(&g.nodes).unwrap_or_default();
+                let edges_json = serde_json::to_string(&g.edges).unwrap_or_default();
+
+                let script_content = format!(r#"
+                    (function() {{
+                        var rawNodes = {nodes_json};
+                        var rawEdges = {edges_json};
+                        var nodes = new vis.DataSet(rawNodes.map(function(n) {{
+                            var color = n.kind === 'file' ? '#7c3aed' : n.kind === 'module' ? '#4f46e5' : '#374151';
+                            return {{ id: n.id, label: n.label, color: {{ background: color, border: '#a78bfa' }},
+                                     font: {{ color: '#e6edf3', size: 13 }}, shape: 'box',
+                                     borderWidth: 1, shadow: true }};
+                        }}));
+                        var edges = new vis.DataSet(rawEdges.map(function(e) {{
+                            return {{ from: e.from, to: e.to, arrows: 'to',
+                                     color: {{ color: '#4b5563', highlight: '#7c3aed' }},
+                                     smooth: {{ type: 'cubicBezier' }} }};
+                        }}));
+                        var container = document.getElementById('graph-container');
+                        if (container) {{
+                            new vis.Network(container, {{ nodes: nodes, edges: edges }}, {{
+                                layout: {{ improvedLayout: true }},
+                                physics: {{ barnesHut: {{ gravitationalConstant: -3000 }} }},
+                                interaction: {{ hover: true, tooltipDelay: 100 }}
+                            }});
+                        }}
+                    }})();
+                "#);
+
+                view! {
+                    <div>
+                        <div class="mb-4 flex items-center gap-4">
+                            <span class="text-sm px-3 py-1 rounded-full"
+                                  style="background: rgba(124,58,237,0.2); color: var(--accent-light);">
+                                {format!("{} nodes", g.nodes.len())}
+                            </span>
+                            <span class="text-sm px-3 py-1 rounded-full"
+                                  style="background: rgba(124,58,237,0.1); color: var(--text-muted);">
+                                {format!("{} edges", g.edges.len())}
+                            </span>
+                        </div>
+                        <div id="graph-container"></div>
+                        <script dangerously_set_inner_html=script_content />
+                    </div>
+                }.into_view()
+            })}
+        </Suspense>
+    }
+}
