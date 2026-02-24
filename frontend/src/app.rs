@@ -205,3 +205,83 @@ pub fn App() -> impl IntoView {
         </div>
     }
 }
+
+
+#[component]
+fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
+    let summary = create_resource(project_id, |pid| async move {
+        let url = match &pid {
+            Some(id) => format!("/api/summary?project_id={id}"),
+            None => "/api/summary".into(),
+        };
+        Request::get(&url).send().await.ok()?
+            .json::<AnalysisSummary>().await.ok()
+    });
+
+    view! {
+        <div>
+            <Suspense fallback=move || view! { <LoadingCard /> }>
+                {move || summary.get().flatten().map(|s| view! {
+                    <div>
+                        <div class="mb-6">
+                            <h2 class="text-2xl font-bold" style="color: var(--text-primary);">
+                                {s.project_name.clone()}
+                            </h2>
+                            <p class="text-sm mt-1" style="color: var(--text-muted);">"Project analysis results"</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
+                            <StatCard label="Files" value=s.total_files.to_string() icon="📁" />
+                            <StatCard label="Functions" value=s.total_functions.to_string() icon="⚙️" />
+                            <StatCard label="Imports" value=s.total_imports.to_string() icon="🔗" />
+                            <StatCard label="Avg Complexity"
+                                      value=format!("{:.1}", s.avg_complexity) icon="🌡" />
+                        </div>
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+                                <h3 class="font-semibold mb-3" style="color: var(--accent-light);">"🏗 Architecture Notes"</h3>
+                                <ul class="space-y-2">
+                                    {s.architecture_notes.iter().map(|n| view! {
+                                        <li class="text-sm flex gap-2">
+                                            <span style="color: var(--accent);">"→"</span>
+                                            <span style="color: var(--text-primary);">{n.clone()}</span>
+                                        </li>
+                                    }).collect_view()}
+                                </ul>
+                            </div>
+                            <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
+                                <h3 class="font-semibold mb-3" style="color: var(--warning);">"💀 Dead Code Candidates"</h3>
+                                {if s.dead_code_candidates.is_empty() {
+                                    view! { <p class="text-sm" style="color: var(--success);">"✓ No dead code detected."</p> }.into_view()
+                                } else {
+                                    view! {
+                                        <ul class="space-y-1">
+                                            {s.dead_code_candidates.iter().map(|fn_name| view! {
+                                                <li class="text-sm mono px-2 py-1 rounded"
+                                                    style="background: rgba(210,153,34,0.1); color: var(--warning);">
+                                                    {fn_name.clone()}
+                                                </li>
+                                            }).collect_view()}
+                                        </ul>
+                                    }.into_view()
+                                }}
+                            </div>
+                        </div>
+                    </div>
+                })}
+                {move || {
+                    if summary.get().is_none() || summary.get() == Some(None) {
+                        view! {
+                            <EmptyState
+                                icon="📊"
+                                title="No analysis yet"
+                                hint="Click ⚡ Run Analysis to analyze the mounted project."
+                            />
+                        }.into_view()
+                    } else {
+                        view! {}.into_view()
+                    }
+                }}
+            </Suspense>
+        </div>
+    }
+}
