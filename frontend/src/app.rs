@@ -67,3 +67,13 @@ pub struct ComplexityItem {
     pub line_start: i32,
     pub line_end: i32,
 }
+
+// ───  ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq)]
+enum Tab {
+    Summary,
+    Files,
+    Graph,
+    Complexity,
+}
