@@ -202,7 +202,7 @@ async fn resolve_project_id(
         return Ok(id);
     }
 
-    sqlx::query_scalar!(
+    sqlx::query_scalar::<_, Uuid>(
         "SELECT id FROM projects ORDER BY updated_at DESC LIMIT 1"
     )
     .fetch_optional(pool)
