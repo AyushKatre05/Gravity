@@ -1,7 +1,10 @@
-use leptos::*;
+use leptos::{
+    component, create_signal, view, IntoView,
+    spawn_local, event_target_value,
+};
+use leptos_router::*;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyzeRequest {
@@ -89,16 +92,17 @@ pub fn App() -> impl IntoView {
     let (github_url, set_github_url)  = create_signal(String::new());
 
     let run_analyze = move |_| {
-        set_analyzing(true);
-        set_error(None);
+        set_analyzing.set(true);
+        set_error.set(None);
+        let github_url_val = github_url.get();
         spawn_local(async move {
             match Request::post("/api/analyze")
                 .header("Content-Type", "application/json")
-                .body(serde_json::to_string(&AnalyzeRequest {
+                .json(&AnalyzeRequest {
                     project_name: Some("gravity-project".into()),
                     path: None,
-                    github_url: if github_url().is_empty() { None } else { Some(github_url()) },
-                }).unwrap())
+                    github_url: if github_url_val.is_empty() { None } else { Some(github_url_val) },
+                })
                 .send()
                 .await
             {
@@ -106,68 +110,79 @@ pub fn App() -> impl IntoView {
                     if resp.ok() {
                         match resp.json::<AnalyzeResponse>().await {
                             Ok(data) => {
-                                set_project_id(Some(data.project_id.clone()));
-                                set_analyze_msg(Some(data.message));
+                                set_project_id.set(Some(data.project_id.clone()));
+                                set_analyze_msg.set(Some(data.message));
                             }
-                            Err(e) => set_error(Some(format!("Parse error: {e}"))),
+                            Err(e) => set_error.set(Some(format!("Parse error: {e}"))),
                         }
                     } else {
-                        set_error(Some(format!("HTTP {}", resp.status())));
+                        set_error.set(Some(format!("HTTP {}", resp.status())));
                     }
                 }
-                Err(e) => set_error(Some(format!("Request failed: {e}"))),
+                Err(e) => set_error.set(Some(format!("Request failed: {e}"))),
             }
-            set_analyzing(false);
+            set_analyzing.set(false);
         });
     };
 
     view! {
-        <div class="min-h-screen" style="background: var(--bg-primary);">
+        <div class="min-h-screen flex flex-col" style="background: var(--bg-primary);">
 
-            <header style="background: var(--bg-secondary); border-bottom: 1px solid var(--border);">
-                <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg flex items-center justify-center"
-                             style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">
-                            <span class="text-lg">⚡</span>
+            <header style="background: var(--bg-secondary); border-bottom: 1px solid var(--border); top: 0; z-index: 50;">
+                <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                 style="background: linear-gradient(135deg, #7c3aed, #4f46e5); flex-shrink: 0;">
+                                <span class="text-xl">"⚡"</span>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold" style="color: var(--text-primary);">"Gravity"</h1>
+                                <p class="text-xs" style="color: var(--text-muted);">"Code Intelligence Dashboard"</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 class="text-xl font-bold" style="color: var(--text-primary);">"Gravity"</h1>
-                            <p class="text-xs" style="color: var(--text-muted);">"Code Intelligence Dashboard"</p>
+
+                        <div class="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
+                            <div class="relative flex-1 md:flex-none">
+                                <input
+                                    type="text"
+                                    placeholder="https://github.com/owner/repo"
+                                    on:input=move |ev| set_github_url.set(event_value(&ev))
+                                    prop:value=github_url
+                                    class="w-full md:w-64 px-3 py-2 rounded-lg text-sm transition-all"
+                                    style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary);"
+                                />
+                            </div>
+                            <button
+                                on:click=run_analyze
+                                disabled=analyzing
+                                class="px-4 md:px-5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
+                                style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white;"
+                            >
+                                {move || if analyzing.get() { "Analyzing…" } else { "⚡ Analyze" }}
+                            </button>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-3">
-                        <input
-                            type="text"
-                            placeholder="https://github.com/owner/repo"
-                            on:input=move |ev| set_github_url(event_value(&ev))
-                            prop:value=github_url
-                            class="px-3 py-2 rounded-lg text-sm w-64 transition-all"
-                            style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); outline: none;"
-                        />
-                        {move || error().map(|e| view! {
-                            <span class="text-sm px-3 py-1 rounded-md"
-                                  style="background: rgba(248,81,73,0.15); color: var(--danger);">{e}</span>
+                    <div class="flex flex-col md:flex-row items-start md:items-center gap-2 mt-4 md:mt-0">
+                        {move || error.get().map(|e| view! {
+                            <div class="w-full md:w-auto px-3 py-2 rounded-lg text-sm animate-fadeIn"
+                                 style="background: rgba(239,68,68,0.15); color: var(--danger);">
+                                "⚠️ " {e}
+                            </div>
                         })}
-                        {move || analyze_msg().map(|m| view! {
-                            <span class="text-sm px-3 py-1 rounded-md"
-                                  style="background: rgba(63,185,80,0.15); color: var(--success);">{m}</span>
+                        {move || analyze_msg.get().map(|m| view! {
+                            <div class="w-full md:w-auto px-3 py-2 rounded-lg text-sm animate-fadeIn"
+                                 style="background: rgba(16,185,129,0.15); color: var(--success);">
+                                "✓ " {m}
+                            </div>
                         })}
-                        <button
-                            on:click=run_analyze
-                            disabled=analyzing
-                            class="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-                            style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; cursor: pointer;"
-                        >
-                            {move || if analyzing() { "Analyzing…" } else { "⚡ Run Analysis" }}
-                        </button>
                     </div>
                 </div>
             </header>
 
-            <nav class="max-w-7xl mx-auto px-6 pt-6">
-                <div class="flex gap-1 p-1 rounded-xl w-fit"
+            <nav class="sticky top-14 md:relative max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-6 z-40">
+                <div class="flex gap-1 p-1 rounded-lg w-full overflow-x-auto"
                      style="background: var(--bg-secondary); border: 1px solid var(--border);">
                     {[
                         (Tab::Summary,    "📊 Summary"),
@@ -178,10 +193,10 @@ pub fn App() -> impl IntoView {
                         let tab_clone = tab.clone();
                         view! {
                             <button
-                                on:click=move |_| set_tab(tab_clone.clone())
-                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                                on:click=move |_| set_tab.set(tab_clone.clone())
+                                class="px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap"
                                 style=move || {
-                                    if active_tab() == tab.clone() {
+                                    if active_tab.get() == tab.clone() {
                                         "background: var(--accent); color: white;"
                                     } else {
                                         "color: var(--text-muted); background: transparent;"
@@ -193,19 +208,24 @@ pub fn App() -> impl IntoView {
                 </div>
             </nav>
 
-            // ── Content ───────────────────────────────────────────────────
-            <main class="max-w-7xl mx-auto px-6 py-6">
-                {move || match active_tab() {
+            <main class="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-6 w-full">
+                {move || match active_tab.get() {
                     Tab::Summary    => view! { <SummaryPanel project_id=project_id /> }.into_view(),
                     Tab::Files      => view! { <FilesPanel project_id=project_id /> }.into_view(),
                     Tab::Graph      => view! { <GraphPanel project_id=project_id /> }.into_view(),
                     Tab::Complexity => view! { <ComplexityPanel project_id=project_id /> }.into_view(),
                 }}
             </main>
+
+            <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border); margin-top: auto;">
+                <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center text-xs" style="color: var(--text-muted);">
+                    "Gravity v1.0 • Code Analysis Dashboard • "
+                    <a href="https://github.com/ayush/gravity" style="color: var(--accent);">{"Open Source"}</a>
+                </div>
+            </footer>
         </div>
     }
 }
-
 
 #[component]
 fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
@@ -490,14 +510,25 @@ fn ComplexityPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
 }
 
 #[component]
-fn StatCard(label: &'static str, value: String, icon: &'static str) -> impl IntoView {
+#[component]
+fn StatCard(
+    label: &'static str,
+    value: String,
+    icon: &'static str,
+    #[prop(optional)] subtitle: Option<&'static str>,
+) -> impl IntoView {
     view! {
-        <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="text-xl">{icon}</span>
-                <span class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted);">{label}</span>
+        <div class="p-4 md:p-6 rounded-xl card-hover" style="background: var(--bg-card); border: 1px solid var(--border);">
+            <div class="flex items-start gap-3 mb-3">
+                <span class="text-2xl md:text-3xl">{icon}</span>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">{label}</p>
+                    {subtitle.map(|s| view! {
+                        <p class="text-xs" style="color: var(--text-muted); margin-top: 2px;">{s}</p>
+                    })}
+                </div>
             </div>
-            <div class="text-3xl font-bold" style="color: var(--text-primary);">{value}</div>
+            <div class="text-3xl md:text-4xl font-bold" style="color: var(--accent-light);">{value}</div>
         </div>
     }
 }
