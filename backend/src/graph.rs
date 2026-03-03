@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use petgraph::graph::{DiGraph, NodeIndex};
-use serde_json;
 
 use crate::models::{GraphData, GraphEdge, GraphNode, ParsedFile};
 

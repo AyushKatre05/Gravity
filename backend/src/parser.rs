@@ -11,7 +11,7 @@ pub fn parse_directory(root_path: &str) -> Result<Vec<ParsedFile>> {
     let mut parser = Parser::new();
     let lang = unsafe { tree_sitter_rust() };
     parser
-        .set_language(lang)
+        .set_language(&lang)
         .context("Failed to set tree-sitter Rust language")?;
 
     let mut results = Vec::new();
@@ -125,8 +125,9 @@ fn extract_function(node: &Node, source: &str) -> Option<ParsedFunction> {
     // Check for async keyword
     let is_async = {
         let mut cursor = node.walk();
-        node.children(&mut cursor)
-            .any(|c| c.kind() == "async")
+        let has_async = node.children(&mut cursor)
+            .any(|c| c.kind() == "async");
+        has_async
     };
 
     let body_source = node
