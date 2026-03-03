@@ -4,58 +4,206 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gravity — Code Intelligence Dashboard</title>
-  <meta name="description" content="Self-hosted code intelligence dashboard: file structure, dependency graphs, cyclomatic complexity, and dead code detection for your Rust projects." />
+  <meta name="description" content="Analyze your Rust projects with code intelligence: dependency graphs, cyclomatic complexity, dead code detection, and architecture insights." />
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="text/javascript"
     src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js">
   </script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     :root {
-      --bg-primary:   #0d1117;
-      --bg-secondary: #161b22;
-      --bg-card:      #1c2128;
-      --border:       #30363d;
+      --bg-primary:   #0a0e27;
+      --bg-secondary: #13182f;
+      --bg-card:      #1a2342;
+      --bg-hover:     #222d47;
+      --border:       #2d3a5a;
       --accent:       #7c3aed;
       --accent-light: #a78bfa;
-      --text-primary: #e6edf3;
-      --text-muted:   #7d8590;
-      --success:      #3fb950;
-      --warning:      #d29922;
-      --danger:       #f85149;
+      --accent-darker: #5e1dd4;
+      --text-primary: #f1f5f9;
+      --text-muted:   #94a3b8;
+      --success:      #10b981;
+      --warning:      #f59e0b;
+      --danger:       #ef4444;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
 
     body {
       font-family: 'Inter', sans-serif;
       background: var(--bg-primary);
       color: var(--text-primary);
       min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     #graph-container {
       width: 100%;
-      height: 520px;
+      height: 550px;
       border-radius: 12px;
       background: var(--bg-card);
       border: 1px solid var(--border);
+      overflow: hidden;
     }
 
     .complexity-low    { color: var(--success); }
     .complexity-medium { color: var(--warning); }
     .complexity-high   { color: var(--danger);  }
 
-    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    code, .mono { 
+      font-family: 'JetBrains Mono', monospace; 
+      font-weight: 500;
+    }
 
     /* Scrollbar */
-    ::-webkit-scrollbar       { width: 6px; }
+    ::-webkit-scrollbar       { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg-secondary); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { 
+      background: var(--border); 
+      border-radius: 4px; 
+      transition: background 0.2s;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* Button styles */
+    button {
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Input styles */
+    input, textarea {
+      transition: all 0.3s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #graph-container {
+        height: 400px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    /* Gradient backgrounds */
+    .gradient-purple {
+      background: linear-gradient(135deg, var(--accent), var(--accent-darker));
+    }
+
+    .gradient-card {
+      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+    }
+
+    /* Table styles */
+    table {
+      border-collapse: collapse;
+    }
+
+    table thead tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background-color 0.2s;
+    }
+
+    table tbody tr:hover {
+      background-color: var(--bg-hover) !important;
+    }
+
+    /* Card hover effect */
+    .card-hover {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+    }
   </style>
 </head>
 <body>
+  <div id="app"></div>
 </body>
 </html>
