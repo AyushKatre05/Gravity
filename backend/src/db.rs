@@ -3,9 +3,9 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
 use crate::models::{
-    AnalysisSummary, ComplexityItem, Dependency, FileEntry,
-    FunctionEntry, GraphData, GraphEdge, GraphNode, ParsedFile,
-    ParsedFunction, Project,
+    AnalysisSummary, ComplexityItem, FileEntry,
+    GraphData, GraphEdge, GraphNode, ParsedFile,
+    Project,
 };
 pub async fn init_pool(database_url: &str) -> Result<PgPool> {
     let pool = PgPoolOptions::new()
@@ -26,37 +26,35 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
 }
 
 pub async fn upsert_project(pool: &PgPool, name: &str, path: &str) -> Result<Project> {
-    let existing = sqlx::query_as!(
-        Project,
+    let existing = sqlx::query_as::<_, Project>(
         r#"SELECT id, name, path, created_at, updated_at
            FROM projects WHERE name = $1 AND path = $2
            LIMIT 1"#,
-        name,
-        path
     )
+    .bind(name)
+    .bind(path)
     .fetch_optional(pool)
     .await?;
 
     if let Some(p) = existing {
         // Update timestamp
-        sqlx::query!(
+        sqlx::query(
             "UPDATE projects SET updated_at = NOW() WHERE id = $1",
-            p.id
         )
+        .bind(p.id)
         .execute(pool)
         .await?;
         return Ok(p);
     }
 
-    let project = sqlx::query_as!(
-        Project,
+    let project = sqlx::query_as::<_, Project>(
         r#"INSERT INTO projects (id, name, path, created_at, updated_at)
            VALUES ($1, $2, $3, NOW(), NOW())
            RETURNING id, name, path, created_at, updated_at"#,
-        Uuid::new_v4(),
-        name,
-        path
     )
+    .bind(Uuid::new_v4())
+    .bind(name)
+    .bind(path)
     .fetch_one(pool)
     .await
     .context("Failed to insert project")?;
@@ -72,47 +70,51 @@ pub async fn save_analysis(
 ) -> Result<()> {
     let mut tx = pool.begin().await?;
 
-    sqlx::query!("DELETE FROM complexities WHERE project_id = $1", project_id)
+    sqlx::query("DELETE FROM complexities WHERE project_id = $1")
+        .bind(project_id)
         .execute(&mut *tx)
         .await?;
-    sqlx::query!("DELETE FROM functions WHERE project_id = $1", project_id)
+    sqlx::query("DELETE FROM functions WHERE project_id = $1")
+        .bind(project_id)
         .execute(&mut *tx)
         .await?;
-    sqlx::query!("DELETE FROM dependencies WHERE project_id = $1", project_id)
+    sqlx::query("DELETE FROM dependencies WHERE project_id = $1")
+        .bind(project_id)
         .execute(&mut *tx)
         .await?;
-    sqlx::query!("DELETE FROM files WHERE project_id = $1", project_id)
+    sqlx::query("DELETE FROM files WHERE project_id = $1")
+        .bind(project_id)
         .execute(&mut *tx)
         .await?;
 
     for parsed_file in parsed_files {
         let file_id = Uuid::new_v4();
 
-        sqlx::query!(
+        sqlx::query(
             r#"INSERT INTO files (id, project_id, path, module_name, line_count, created_at)
                VALUES ($1, $2, $3, $4, $5, NOW())"#,
-            file_id,
-            project_id,
-            parsed_file.path,
-            parsed_file.module_name,
-            parsed_file.line_count as i32,
         )
+        .bind(file_id)
+        .bind(project_id)
+        .bind(&parsed_file.path)
+        .bind(&parsed_file.module_name)
+        .bind(parsed_file.line_count as i32)
         .execute(&mut *tx)
         .await?;
         for func in &parsed_file.functions {
             let func_id = Uuid::new_v4();
-            sqlx::query!(
+            sqlx::query(
                 r#"INSERT INTO functions (id, project_id, file_id, name, line_start, line_end, is_public, is_async, created_at)
                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())"#,
-                func_id,
-                project_id,
-                file_id,
-                func.name,
-                func.line_start as i32,
-                func.line_end as i32,
-                func.is_public,
-                func.is_async,
             )
+            .bind(func_id)
+            .bind(project_id)
+            .bind(file_id)
+            .bind(&func.name)
+            .bind(func.line_start as i32)
+            .bind(func.line_end as i32)
+            .bind(func.is_public)
+            .bind(func.is_async)
             .execute(&mut *tx)
             .await?;
 
@@ -122,27 +124,27 @@ pub async fn save_analysis(
                 .map(|(_, _, s)| *s as i32)
                 .unwrap_or(1);
 
-            sqlx::query!(
+            sqlx::query(
                 r#"INSERT INTO complexities (id, project_id, function_id, score, created_at)
                    VALUES ($1, $2, $3, $4, NOW())"#,
-                Uuid::new_v4(),
-                project_id,
-                func_id,
-                score,
             )
+            .bind(Uuid::new_v4())
+            .bind(project_id)
+            .bind(func_id)
+            .bind(score)
             .execute(&mut *tx)
             .await?;
         }
         for import_target in &parsed_file.imports {
-            sqlx::query!(
+            sqlx::query(
                 r#"INSERT INTO dependencies (id, project_id, file_id, source, target, kind, created_at)
                    VALUES ($1, $2, $3, $4, $5, 'use', NOW())"#,
-                Uuid::new_v4(),
-                project_id,
-                file_id,
-                parsed_file.path,
-                import_target,
             )
+            .bind(Uuid::new_v4())
+            .bind(project_id)
+            .bind(file_id)
+            .bind(&parsed_file.path)
+            .bind(import_target)
             .execute(&mut *tx)
             .await?;
         }
@@ -153,52 +155,49 @@ pub async fn save_analysis(
 }
 
 pub async fn fetch_summary(pool: &PgPool, project_id: Uuid) -> Result<AnalysisSummary> {
+    #[derive(sqlx::FromRow)]
     struct Row {
         name: String,
         path: String,
     }
 
-    let project = sqlx::query_as!(
-        Row,
+    let project = sqlx::query_as::<_, Row>(
         "SELECT name, path FROM projects WHERE id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_one(pool)
     .await
     .context("Project not found")?;
 
-    let total_files: i64 = sqlx::query_scalar!(
+    let total_files: i64 = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM files WHERE project_id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_one(pool)
-    .await?
-    .unwrap_or(0);
+    .await?;
 
-    let total_functions: i64 = sqlx::query_scalar!(
+    let total_functions: i64 = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM functions WHERE project_id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_one(pool)
-    .await?
-    .unwrap_or(0);
+    .await?;
 
-    let total_imports: i64 = sqlx::query_scalar!(
+    let total_imports: i64 = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM dependencies WHERE project_id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_one(pool)
-    .await?
-    .unwrap_or(0);
+    .await?;
 
-    let avg_complexity: f64 = sqlx::query_scalar!(
+    let avg_complexity: f64 = sqlx::query_scalar::<_, Option<f64>>(
         "SELECT AVG(score::FLOAT8) FROM complexities WHERE project_id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_one(pool)
     .await?
     .unwrap_or(1.0);
-    let dead_code_candidates: Vec<String> = sqlx::query_scalar!(
+    let dead_code_candidates: Vec<String> = sqlx::query_scalar::<_, String>(
         r#"SELECT f.name
            FROM functions f
            WHERE f.project_id = $1
@@ -208,8 +207,8 @@ pub async fn fetch_summary(pool: &PgPool, project_id: Uuid) -> Result<AnalysisSu
              AND f.is_public = FALSE
            ORDER BY f.name
            LIMIT 20"#,
-        project_id
     )
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
     let mut notes = Vec::new();
@@ -240,12 +239,11 @@ pub async fn fetch_summary(pool: &PgPool, project_id: Uuid) -> Result<AnalysisSu
 }
 
 pub async fn fetch_files(pool: &PgPool, project_id: Uuid) -> Result<Vec<FileEntry>> {
-    let files = sqlx::query_as!(
-        FileEntry,
+    let files = sqlx::query_as::<_, FileEntry>(
         r#"SELECT id, project_id, path, module_name, line_count, created_at
            FROM files WHERE project_id = $1 ORDER BY path"#,
-        project_id
     )
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
 
@@ -253,23 +251,23 @@ pub async fn fetch_files(pool: &PgPool, project_id: Uuid) -> Result<Vec<FileEntr
 }
 
 pub async fn fetch_graph(pool: &PgPool, project_id: Uuid) -> Result<GraphData> {
+    #[derive(sqlx::FromRow)]
     struct DepRow {
         source: String,
         target: String,
     }
 
-    let deps = sqlx::query_as!(
-        DepRow,
+    let deps = sqlx::query_as::<_, DepRow>(
         "SELECT source, target FROM dependencies WHERE project_id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
 
-    let files = sqlx::query_scalar!(
+    let files = sqlx::query_scalar::<_, String>(
         "SELECT path FROM files WHERE project_id = $1",
-        project_id
     )
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
 
@@ -311,6 +309,7 @@ pub async fn fetch_graph(pool: &PgPool, project_id: Uuid) -> Result<GraphData> {
 }
 
 pub async fn fetch_complexities(pool: &PgPool, project_id: Uuid) -> Result<Vec<ComplexityItem>> {
+    #[derive(sqlx::FromRow)]
     struct Row {
         function_name: String,
         file_path: String,
@@ -319,8 +318,7 @@ pub async fn fetch_complexities(pool: &PgPool, project_id: Uuid) -> Result<Vec<C
         line_end: i32,
     }
 
-    let rows = sqlx::query_as!(
-        Row,
+    let rows = sqlx::query_as::<_, Row>(
         r#"SELECT
                fn.name      AS function_name,
                fi.path      AS file_path,
@@ -332,8 +330,8 @@ pub async fn fetch_complexities(pool: &PgPool, project_id: Uuid) -> Result<Vec<C
            JOIN files     fi ON fn.file_id      = fi.id
            WHERE cx.project_id = $1
            ORDER BY cx.score DESC"#,
-        project_id
     )
+    .bind(project_id)
     .fetch_all(pool)
     .await?;
 
