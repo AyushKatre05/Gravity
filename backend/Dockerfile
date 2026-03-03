@@ -1,26 +1,24 @@
 # ─── Stage 1: Builder ────────────────────────────────────────────────────────
-FROM rust:1.85-slim AS builder
+FROM rust:1.88-slim AS builder
 
 # Install essential build tooling
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Cache dependencies first for faster rebuilds
+# Copy manifest files
 COPY Cargo.toml Cargo.lock* ./
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs
-RUN SQLX_OFFLINE=true cargo build --release 2>/dev/null || true
-RUN rm -f src/main.rs
 
-# Copy real source
-COPY . .
+# Copy src and migrations
+COPY src ./src
+COPY migrations ./migrations
 
-# Build with sqlx offline mode (no live DB needed at build time)
-ENV SQLX_OFFLINE=true
+# Build without sqlx offline mode
 RUN cargo build --release
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────────────────
@@ -44,9 +42,16 @@ COPY --from=builder /app/migrations ./migrations
 # Create the /analyze mount point
 RUN mkdir -p /analyze
 
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
 # Render and other platforms inject PORT; default to 8080
 ENV PORT=8080
 ENV ANALYZE_PATH=/analyze
+EXPOSE 8080
+
+CMD ["gravity-backend"]
 
 EXPOSE ${PORT}
 
