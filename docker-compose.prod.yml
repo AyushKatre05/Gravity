@@ -1,0 +1,153 @@
+version: "3.9"
+
+# Production-optimized Docker Compose configuration
+# Use this for self-hosted deployments
+
+services:
+  # ── PostgreSQL Database ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: gravity-postgres
+    environment:
+      POSTGRES_DB: gravity
+      POSTGRES_USER: ${DB_USER:-gravityuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Database password required}
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c work_mem=16MB"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gravity-net
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-gravityuser}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Backend Service ────────────────────────────────────────────────────────
+  backend:
+    image: ${DOCKER_REGISTRY:-localhost}/gravity-backend:${APP_VERSION:-latest}
+    container_name: gravity-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      cache_from:
+        - ${DOCKER_REGISTRY:-localhost}/gravity-backend:latest
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-gravityuser}:${DB_PASSWORD}@postgres:5432/gravity
+      PORT: "8080"
+      ANALYZE_PATH: "/analyze"
+      RUST_LOG: "warn"
+      RUST_BACKTRACE: "1"
+    volumes:
+      - ./sample_project:/analyze:ro
+      - backend_cache:/home/gravity/.cargo
+    networks:
+      - gravity-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Limit resources
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  # ── Frontend Service ──────────────────────────────────────────────────────
+  frontend:
+    image: ${DOCKER_REGISTRY:-localhost}/gravity-frontend:${APP_VERSION:-latest}
+    container_name: gravity-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      cache_from:
+        - ${DOCKER_REGISTRY:-localhost}/gravity-frontend:latest
+    volumes:
+      - frontend-dist:/usr/share/nginx/html
+    networks:
+      - gravity-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  # ── Nginx Reverse Proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: gravity-nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      NGINX_PORT: "${HTTP_PORT:-80}"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend-dist:/usr/share/nginx/html:ro
+      # For SSL certificates (if using HTTPS)
+      # - ./certs:/etc/nginx/certs:ro
+    networks:
+      - gravity-net
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:${HTTP_PORT:-80}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+        reservations:
+          cpus: "0.5"
+          memory: 128M
+
+volumes:
+  frontend-dist:
+  postgres_data:
+    driver: local
+  backend_cache:
+    driver: local
+
+networks:
+  gravity-net:
+    driver: bridge
