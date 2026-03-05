@@ -1,13 +1,17 @@
 version: "3.9"
 
 services:
+  # ── PostgreSQL Database ────────────────────────────────────────────────────
+  # Using Neon serverless PostgreSQL (external service, not containerized)
+
+  
   # ── Backend ───────────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://neondb_owner:npg_PtKo9vMZsr8x@ep-orange-scene-ab3pw8x8-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       PORT: "8080"
       ANALYZE_PATH: "/analyze"
       RUST_LOG: "info"
@@ -18,12 +22,6 @@ services:
     networks:
       - gravity-net
     restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # ── Frontend build (produces static files) ────────────────────────────────
   frontend:

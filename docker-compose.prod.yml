@@ -1,8 +1,5 @@
 version: "3.9"
 
-# Production-optimized Docker Compose configuration
-# Use this for self-hosted deployments
-
 services:
   # ── PostgreSQL Database ────────────────────────────────────────────────────
   postgres:
