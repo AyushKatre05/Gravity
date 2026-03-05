@@ -1,6 +1,7 @@
 use leptos::{
     component, create_signal, view, IntoView,
-    spawn_local, event_target_value,
+    spawn_local, event_target_value, ReadSignal,
+    CollectView, SignalGet, Suspense, create_resource,
 };
 use leptos_router::*;
 use gloo_net::http::Request;
@@ -134,7 +135,7 @@ pub fn App() -> impl IntoView {
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg flex items-center justify-center"
                                  style="background: linear-gradient(135deg, #7c3aed, #4f46e5); flex-shrink: 0;">
-                                <span class="text-xl">"⚡"</span>
+                                <span class="text-xl">"[G]"</span>
                             </div>
                             <div>
                                 <h1 class="text-2xl font-bold" style="color: var(--text-primary);">"Gravity"</h1>
@@ -159,7 +160,7 @@ pub fn App() -> impl IntoView {
                                 class="px-4 md:px-5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
                                 style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white;"
                             >
-                                {move || if analyzing.get() { "Analyzing…" } else { "⚡ Analyze" }}
+                                {move || if analyzing.get() { "Analyzing..." } else { "Analyze" }}
                             </button>
                         </div>
                     </div>
@@ -168,13 +169,13 @@ pub fn App() -> impl IntoView {
                         {move || error.get().map(|e| view! {
                             <div class="w-full md:w-auto px-3 py-2 rounded-lg text-sm animate-fadeIn"
                                  style="background: rgba(239,68,68,0.15); color: var(--danger);">
-                                "⚠️ " {e}
+                                "[ERR] " {e}
                             </div>
                         })}
                         {move || analyze_msg.get().map(|m| view! {
                             <div class="w-full md:w-auto px-3 py-2 rounded-lg text-sm animate-fadeIn"
-                                 style="background: rgba(16,185,129,0.15); color: var(--success);">
-                                "✓ " {m}
+                                 style="background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary);">
+                                "[OK] " {m}
                             </div>
                         })}
                     </div>
@@ -185,10 +186,10 @@ pub fn App() -> impl IntoView {
                 <div class="flex gap-1 p-1 rounded-lg w-full overflow-x-auto"
                      style="background: var(--bg-secondary); border: 1px solid var(--border);">
                     {[
-                        (Tab::Summary,    "📊 Summary"),
-                        (Tab::Files,      "📁 Files"),
-                        (Tab::Graph,      "🔗 Graph"),
-                        (Tab::Complexity, "🌡 Complexity"),
+                        (Tab::Summary,    "Summary"),
+                        (Tab::Files,      "Files"),
+                        (Tab::Graph,      "Graph"),
+                        (Tab::Complexity, "Complexity"),
                     ].into_iter().map(|(tab, label)| {
                         let tab_clone = tab.clone();
                         view! {
@@ -250,28 +251,28 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                             <p class="text-sm mt-1" style="color: var(--text-muted);">"Project analysis results"</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
-                            <StatCard label="Files" value=s.total_files.to_string() icon="📁" />
-                            <StatCard label="Functions" value=s.total_functions.to_string() icon="⚙️" />
-                            <StatCard label="Imports" value=s.total_imports.to_string() icon="🔗" />
+                            <StatCard label="Files" value=s.total_files.to_string() icon="[F]" />
+                            <StatCard label="Functions" value=s.total_functions.to_string() icon="[Fn]" />
+                            <StatCard label="Imports" value=s.total_imports.to_string() icon="[I]" />
                             <StatCard label="Avg Complexity"
-                                      value=format!("{:.1}", s.avg_complexity) icon="🌡" />
+                                      value=format!("{:.1}", s.avg_complexity) icon="[C]" />
                         </div>
                         <div class="grid gap-4 lg:grid-cols-2">
                             <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
-                                <h3 class="font-semibold mb-3" style="color: var(--accent-light);">"🏗 Architecture Notes"</h3>
+                                <h3 class="font-semibold mb-3" style="color: var(--accent-light);">[ARCH] Architecture Notes</h3>
                                 <ul class="space-y-2">
                                     {s.architecture_notes.iter().map(|n| view! {
                                         <li class="text-sm flex gap-2">
-                                            <span style="color: var(--accent);">"→"</span>
+                                            <span style="color: var(--accent);">">"</span>
                                             <span style="color: var(--text-primary);">{n.clone()}</span>
                                         </li>
                                     }).collect_view()}
                                 </ul>
                             </div>
                             <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
-                                <h3 class="font-semibold mb-3" style="color: var(--warning);">"💀 Dead Code Candidates"</h3>
+                                <h3 class="font-semibold mb-3" style="color: var(--warning);">[DEAD] Dead Code Candidates</h3>
                                 {if s.dead_code_candidates.is_empty() {
-                                    view! { <p class="text-sm" style="color: var(--success);">"✓ No dead code detected."</p> }.into_view()
+                                    view! { <p class="text-sm" style="color: var(--success);">[OK] No dead code detected.</p> }.into_view()
                                 } else {
                                     view! {
                                         <ul class="space-y-1">
@@ -292,7 +293,7 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                     if summary.get().is_none() || summary.get() == Some(None) {
                         view! {
                             <EmptyState
-                                icon="📊"
+                                icon="[SUM]"
                                 title="No analysis yet"
                                 hint="Click ⚡ Run Analysis to analyze the mounted project."
                             />
@@ -321,7 +322,7 @@ fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
         <Suspense fallback=move || view! { <LoadingCard /> }>
             {move || files.get().flatten().map(|fs| {
                 if fs.is_empty() {
-                    view! { <EmptyState icon="📁" title="No files found" hint="Run analysis first." /> }.into_view()
+                    view! { <EmptyState icon="[FILE]" title="No files found" hint="Run analysis first." /> }.into_view()
                 } else {
                     view! {
                         <div class="rounded-xl overflow-hidden" style="border: 1px solid var(--border);">
@@ -376,7 +377,7 @@ fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
         <Suspense fallback=move || view! { <LoadingCard /> }>
             {move || graph.get().flatten().map(|g| {
                 if g.nodes.is_empty() {
-                    return view! { <EmptyState icon="🔗" title="No graph data" hint="Run analysis first." /> }.into_view();
+                    return view! { <EmptyState icon="[NET]" title="No graph data" hint="Run analysis first." /> }.into_view();
                 }
 
                 let nodes_json = serde_json::to_string(&g.nodes).unwrap_or_default();
@@ -444,7 +445,7 @@ fn ComplexityPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
         <Suspense fallback=move || view! { <LoadingCard /> }>
             {move || items.get().flatten().map(|cx| {
                 if cx.is_empty() {
-                    return view! { <EmptyState icon="🌡" title="No complexity data" hint="Run analysis first." /> }.into_view();
+                    return view! { <EmptyState icon="[COMP]" title="No complexity data" hint="Run analysis first." /> }.into_view();
                 }
                 view! {
                     <div class="rounded-xl overflow-hidden" style="border: 1px solid var(--border);">
@@ -509,7 +510,6 @@ fn ComplexityPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
     }
 }
 
-#[component]
 #[component]
 fn StatCard(
     label: &'static str,
