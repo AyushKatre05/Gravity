@@ -7,6 +7,10 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     git \
     ca-certificates \
+    build-essential \
+    gcc \
+    g++ \
+    make \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -29,6 +33,8 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     curl \
     git \
+    gcc \
+    libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
