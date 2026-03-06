@@ -11,7 +11,7 @@ pub fn parse_directory(root_path: &str) -> Result<Vec<ParsedFile>> {
     let mut parser = Parser::new();
     let lang = unsafe { tree_sitter_rust() };
     parser
-        .set_language(&lang)
+        .set_language(lang)
         .context("Failed to set tree-sitter Rust language")?;
 
     let mut results = Vec::new();

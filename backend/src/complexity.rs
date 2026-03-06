@@ -24,7 +24,7 @@ pub fn compute_complexity(func: &ParsedFunction) -> Result<usize> {
     let mut parser = Parser::new();
     let lang = unsafe { tree_sitter_rust() };
     parser
-        .set_language(&lang)
+        .set_language(lang)
         .context("Failed to set language for complexity parser")?;
 
     let tree = parser

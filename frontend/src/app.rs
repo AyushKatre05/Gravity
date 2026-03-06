@@ -1,9 +1,8 @@
 use leptos::{
     component, create_signal, view, IntoView,
-    spawn_local, event_target_value, ReadSignal,
-    CollectView, SignalGet, Suspense, create_resource,
+    spawn_local, ReadSignal, WriteSignal, event_target_value,
+    CollectView, SignalGet, SignalSet, Suspense, create_resource,
 };
-use leptos_router::*;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
 
@@ -230,7 +229,9 @@ pub fn App() -> impl IntoView {
 
 #[component]
 fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
-    let summary = create_resource(project_id, |pid| async move {
+    let summary = create_resource(
+        move || project_id.get(),
+        |pid| async move {
         let url = match &pid {
             Some(id) => format!("/api/summary?project_id={id}"),
             None => "/api/summary".into(),
@@ -290,12 +291,12 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                     </div>
                 })}
                 {move || {
-                    if summary.get().is_none() || summary.get() == Some(None) {
+                    if summary.get().is_none() || summary.get().flatten().is_none() {
                         view! {
                             <EmptyState
                                 icon="[SUM]"
                                 title="No analysis yet"
-                                hint="Click ⚡ Run Analysis to analyze the mounted project."
+                                hint="Click button to analyze the mounted project."
                             />
                         }.into_view()
                     } else {
@@ -309,7 +310,9 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
 
 #[component]
 fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
-    let files = create_resource(project_id, |pid| async move {
+    let files = create_resource(
+        move || project_id.get(),
+        |pid| async move {
         let url = match &pid {
             Some(id) => format!("/api/files?project_id={id}"),
             None => "/api/files".into(),
@@ -364,7 +367,9 @@ fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
 
 #[component]
 fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
-    let graph = create_resource(project_id, |pid| async move {
+    let graph = create_resource(
+        move || project_id.get(),
+        |pid| async move {
         let url = match &pid {
             Some(id) => format!("/api/graph?project_id={id}"),
             None => "/api/graph".into(),
@@ -432,7 +437,9 @@ fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
 
 #[component]
 fn ComplexityPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
-    let items = create_resource(project_id, |pid| async move {
+    let items = create_resource(
+        move || project_id.get(),
+        |pid| async move {
         let url = match &pid {
             Some(id) => format!("/api/complexity?project_id={id}"),
             None => "/api/complexity".into(),

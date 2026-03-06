@@ -16,13 +16,14 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy manifest files
-COPY Cargo.toml Cargo.lock* ./
+COPY Cargo.toml ./
 
 # Copy src and migrations
 COPY src ./src
 COPY migrations ./migrations
+COPY build.rs ./
 
-# Build without sqlx offline mode
+# Build release binary
 RUN cargo build --release
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────────────────
