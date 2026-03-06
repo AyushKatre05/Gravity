@@ -1,9 +1,10 @@
 use leptos::{
     component, create_signal, view, IntoView,
-    spawn_local, ReadSignal, WriteSignal, event_target_value,
+    spawn_local, ReadSignal,
     CollectView, SignalGet, SignalSet, Suspense, create_resource,
 };
 use gloo_net::http::Request;
+use web_sys::HtmlInputElement;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,30 +97,34 @@ pub fn App() -> impl IntoView {
         set_error.set(None);
         let github_url_val = github_url.get();
         spawn_local(async move {
-            match Request::post("/api/analyze")
+            let req = Request::post("/api/analyze")
                 .header("Content-Type", "application/json")
                 .json(&AnalyzeRequest {
                     project_name: Some("gravity-project".into()),
                     path: None,
                     github_url: if github_url_val.is_empty() { None } else { Some(github_url_val) },
-                })
-                .send()
-                .await
-            {
-                Ok(resp) => {
-                    if resp.ok() {
-                        match resp.json::<AnalyzeResponse>().await {
-                            Ok(data) => {
-                                set_project_id.set(Some(data.project_id.clone()));
-                                set_analyze_msg.set(Some(data.message));
+                });
+            
+            match req {
+                Ok(builder) => {
+                    match builder.send().await {
+                        Ok(resp) => {
+                            if resp.ok() {
+                                match resp.json::<AnalyzeResponse>().await {
+                                    Ok(data) => {
+                                        set_project_id.set(Some(data.project_id.clone()));
+                                        set_analyze_msg.set(Some(data.message));
+                                    }
+                                    Err(e) => set_error.set(Some(format!("Parse error: {e}"))),
+                                }
+                            } else {
+                                set_error.set(Some(format!("HTTP {}", resp.status())));
                             }
-                            Err(e) => set_error.set(Some(format!("Parse error: {e}"))),
                         }
-                    } else {
-                        set_error.set(Some(format!("HTTP {}", resp.status())));
+                        Err(e) => set_error.set(Some(format!("Request failed: {e}"))),
                     }
                 }
-                Err(e) => set_error.set(Some(format!("Request failed: {e}"))),
+                Err(e) => set_error.set(Some(format!("Request building failed: {e}"))),
             }
             set_analyzing.set(false);
         });
@@ -147,7 +152,13 @@ pub fn App() -> impl IntoView {
                                 <input
                                     type="text"
                                     placeholder="https://github.com/owner/repo"
-                                    on:input=move |ev| set_github_url.set(event_value(&ev))
+                                    on:input=move |ev| {
+                                        if let Some(target) = ev.target() {
+                                            if let Ok(input) = target.dyn_into::<HtmlInputElement>() {
+                                                set_github_url.set(input.value());
+                                            }
+                                        }
+                                    }
                                     prop:value=github_url
                                     class="w-full md:w-64 px-3 py-2 rounded-lg text-sm transition-all"
                                     style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary);"
