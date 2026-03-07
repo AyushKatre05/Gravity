@@ -1,50 +1,60 @@
-use tree_sitter::{Language, Node, Parser};
-use anyhow::{Context, Result};
+use regex::Regex;
+use anyhow::Result;
 
 use crate::models::ParsedFunction;
 
-extern "C" {
-    fn tree_sitter_rust() -> *mut std::ffi::c_void;
-}
-
-const BRANCH_KINDS: &[&str] = &[
-    "if_expression",
-    "else_clause",
-    "match_expression",
-    "match_arm",
-    "for_expression",
-    "while_expression",
-    "loop_expression",
-    "binary_expression", 
-    "try_expression",   
-    "closure_expression",
-];
-
 pub fn compute_complexity(func: &ParsedFunction) -> Result<usize> {
-    let mut parser = Parser::new();
-    
-    // Get language from C function
-    let lang_ptr = unsafe { tree_sitter_rust() };
-    
-    if lang_ptr.is_null() {
-        tracing::error!("tree_sitter_rust() returned null pointer!");
-        return Err(anyhow::anyhow!("tree_sitter_rust() returned null pointer"));
-    }
-    
-    let lang: Language = unsafe {
-        std::mem::transmute_copy(&(lang_ptr as *const _))
-    };
-    
-    parser
-        .set_language(lang)
-        .context("Failed to set language for complexity parser")?;
-
-    let tree = parser
-        .parse(&func.body_source, None)
-        .context("Failed to parse function body")?;
-
+    // Simple regex-based complexity counting
+    // Count branch constructs in the function body
     let mut count = 0usize;
-    count_branches(&tree.root_node(), &func.body_source, &mut count);
+
+    let source = &func.body_source;
+
+    // Count if expressions
+    if Regex::new(r"\bif\s*[({]").unwrap().is_match(source) {
+        count += 1;
+    }
+
+    // Count else if
+    count += Regex::new(r"\belse\s+if\s*[({]").unwrap()
+        .find_iter(source)
+        .count();
+
+    // Count match arms
+    count += Regex::new(r"^\s*\w+\s*=>").unwrap()
+        .find_iter(source)
+        .count()
+        .saturating_sub(1); // subtract 1 because match itself adds baseline
+
+    // Count for loops
+    count += Regex::new(r"\bfor\s+\w+\s+in\b").unwrap()
+        .find_iter(source)
+        .count();
+
+    // Count while loops
+    count += Regex::new(r"\bwhile\s*[({]").unwrap()
+        .find_iter(source)
+        .count();
+
+    // Count loop constructs
+    count += Regex::new(r"\bloop\s*[({]").unwrap()
+        .find_iter(source)
+        .count();
+
+    // Count try expressions (? operator)
+    count += Regex::new(r"\?\s*[,;}\)]").unwrap()
+        .find_iter(source)
+        .count();
+
+    // Count closures
+    count += Regex::new(r"\|\s*\w*[^|]*\|\s*[{(]").unwrap()
+        .find_iter(source)
+        .count();
+
+    // Count && and || operators
+    count += Regex::new(r"(&&|\|\|)").unwrap()
+        .find_iter(source)
+        .count();
 
     Ok(count + 1) // baseline complexity = 1
 }
@@ -62,40 +72,4 @@ pub fn compute_all(
     }
 
     results
-}
-
-fn count_branches(node: &Node, source: &str, count: &mut usize) {
-    match node.kind() {
-        "if_expression" => *count += 1,
-        "else_clause" => {
-            // Only count `else if`, not bare `else`
-            let mut cursor = node.walk();
-            for child in node.children(&mut cursor) {
-                if child.kind() == "if_expression" {
-                    *count += 1;
-                }
-            }
-        }
-        "match_arm" => *count += 1,
-        "for_expression" => *count += 1,
-        "while_expression" => *count += 1,
-        "loop_expression" => *count += 1,
-        "try_expression" => *count += 1, // `?` operator
-        "closure_expression" => *count += 1,
-        "binary_expression" => {
-            // Only `&&` and `||` add a branch
-            let op = node
-                .children(&mut node.walk())
-                .find(|c| c.kind() == "&&" || c.kind() == "||");
-            if op.is_some() {
-                *count += 1;
-            }
-        }
-        _ => {}
-    }
-
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        count_branches(&child, source, count);
-    }
 }

@@ -1,37 +1,12 @@
 use std::path::Path;
 use anyhow::{Context, Result};
 use walkdir::WalkDir;
-use tree_sitter::{Language, Node, Parser};
+use regex::Regex;
 use crate::models::{ParsedFile, ParsedFunction};
 
-extern "C" {
-    fn tree_sitter_rust() -> *const std::ffi::c_void;
-}
-
 pub fn parse_directory(root_path: &str) -> Result<Vec<ParsedFile>> {
-    let mut parser = Parser::new();
-    
-    // Get the language from the tree_sitter_rust C function
-    let lang_ptr = unsafe { tree_sitter_rust() };
-    
-    if lang_ptr.is_null() {
-        tracing::error!("tree_sitter_rust() returned null pointer!");
-        return Err(anyhow::anyhow!("tree_sitter_rust() returned null pointer"));
-    }
-    
-    // Safety: The C function returns a valid TSLanguage pointer
-    // We transmute it directly to Language which should have the same memory layout
-    let lang: Language = unsafe {
-        std::mem::transmute_copy(&(lang_ptr as *const _))
-    };
-    
-    tracing::info!("tree-sitter-rust language loaded successfully");
-    
-    parser
-        .set_language(lang)
-        .context("Failed to set tree-sitter Rust language")?;
-
     let mut results = Vec::new();
+    
     for entry in WalkDir::new(root_path)
         .follow_links(false)
         .into_iter()
@@ -40,36 +15,28 @@ pub fn parse_directory(root_path: &str) -> Result<Vec<ParsedFile>> {
         .filter(|e| e.path().extension().map(|x| x == "rs").unwrap_or(false))
     {
         let path = entry.path();
-        match parse_file(&mut parser, path) {
+        match parse_file(path) {
             Ok(pf) => results.push(pf),
             Err(e) => {
-                tracing::warn!("Skipping {:?}: {e}", path);
+                tracing::warn!("Skipping {:?}: {}", path, e);
             }
         }
     }
 
     Ok(results)
 }
-fn parse_file(parser: &mut Parser, path: &Path) -> Result<ParsedFile> {
+
+fn parse_file(path: &Path) -> Result<ParsedFile> {
     let source = std::fs::read_to_string(path)
         .with_context(|| format!("Cannot read {}", path.display()))?;
 
-    let tree = parser
-        .parse(&source, None)
-        .context("tree-sitter parse returned None")?;
-
-    let root = tree.root_node();
     let line_count = source.lines().count();
     let module_name = path
         .file_stem()
         .and_then(|s| s.to_str())
         .map(str::to_owned);
 
-    let mut functions = Vec::new();
-    let mut imports = Vec::new();
-    let mut structs = Vec::new();
-
-    visit_node(&root, &source, &mut functions, &mut imports, &mut structs);
+    let (functions, imports, structs) = parse_content(&source, path);
 
     let path_str = path
         .to_str()
@@ -80,96 +47,106 @@ fn parse_file(parser: &mut Parser, path: &Path) -> Result<ParsedFile> {
     Ok(ParsedFile {
         path: path_str,
         module_name,
-        line_count,
+        line_count: line_count as usize,
         functions,
         imports,
         structs,
     })
 }
 
-/// 
-fn visit_node(
-    node: &Node,
-    source: &str,
-    functions: &mut Vec<ParsedFunction>,
-    imports: &mut Vec<String>,
-    structs: &mut Vec<String>,
-) {
-    match node.kind() {
-        "function_item" => {
-            if let Some(func) = extract_function(node, source) {
-                functions.push(func);
-            }
-        }
-        "use_declaration" => {
-            if let Some(import) = extract_use(node, source) {
-                imports.push(import);
-            }
-        }
-        "struct_item" => {
-            if let Some(name) = extract_name(node, source) {
-                structs.push(name);
-            }
-        }
-        _ => {}
-    }
+fn parse_content(source: &str, _path: &Path) -> (Vec<ParsedFunction>, Vec<String>, Vec<String>) {
+    let mut functions = Vec::new();
+    let mut imports = Vec::new();
+    let mut structs = Vec::new();
 
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        visit_node(&child, source, functions, imports, structs);
+    // Extract use/import statements
+    extract_imports(source, &mut imports);
+
+    // Extract function definitions
+    extract_functions(source, &mut functions);
+
+    // Extract struct definitions
+    extract_structs(source, &mut structs);
+
+    (functions, imports, structs)
+}
+
+fn extract_imports(source: &str, imports: &mut Vec<String>) {
+    let re = Regex::new(r"^\s*(?:pub\s+)?use\s+[^;]+;").unwrap();
+    for line in source.lines() {
+        if let Some(mat) = re.find(line) {
+            imports.push(mat.as_str().trim().to_owned());
+        }
     }
 }
 
-fn extract_function(node: &Node, source: &str) -> Option<ParsedFunction> {
-    let name = node
-        .child_by_field_name("name")
-        .and_then(|n| n.utf8_text(source.as_bytes()).ok())
-        .map(str::to_owned)?;
+fn extract_functions(source: &str, functions: &mut Vec<ParsedFunction>) {
+    // Match function definitions: [pub] [async] fn name(...)
+    let re = Regex::new(
+        r"(?m)^\s*(?:pub\s+)?(?:async\s+)?fn\s+([a-zA-Z_]\w*)\s*\(",
+    ).unwrap();
 
-    let line_start = node.start_position().row + 1;
-    let line_end = node.end_position().row + 1;
+    let mut current_line = 0;
+    for line in source.lines() {
+        current_line += 1;
 
-    // Check for `pub` visibility
-    let is_public = node
-        .child_by_field_name("visibility_modifier")
-        .map(|n| {
-            n.utf8_text(source.as_bytes())
-                .unwrap_or("")
-                .starts_with("pub")
-        })
-        .unwrap_or(false);
+        if let Some(caps) = re.captures(line) {
+            let name = caps.get(1).map(|m| m.as_str().to_owned()).unwrap_or_default();
+            let is_public = line.contains("pub fn");
+            let is_async = line.contains("async fn");
 
-    // Check for async keyword
-    let is_async = {
-        let mut cursor = node.walk();
-        let has_async = node.children(&mut cursor)
-            .any(|c| c.kind() == "async");
-        has_async
-    };
+            // Try to find the function body
+            let line_start = current_line;
+            let mut line_end = current_line;
 
-    let body_source = node
-        .utf8_text(source.as_bytes())
-        .unwrap_or("")
-        .to_owned();
+            // Scan for closing brace (simplified - counts braces)
+            let mut brace_count = 0;
+            let mut in_body = false;
+            let mut found_opening = false;
 
-    Some(ParsedFunction {
-        name,
-        line_start,
-        line_end,
-        is_public,
-        is_async,
-        body_source,
-    })
+            for (i, body_line) in source.lines().skip(line_start - 1).enumerate() {
+                brace_count += body_line.matches('{').count() as i32;
+                brace_count -= body_line.matches('}').count() as i32;
+
+                if brace_count > 0 {
+                    found_opening = true;
+                    in_body = true;
+                }
+
+                if in_body && brace_count == 0 && found_opening {
+                    line_end = line_start + i;
+                    break;
+                }
+            }
+
+            let body_source = source
+                .lines()
+                .skip(line_start - 1)
+                .take(line_end - line_start + 1)
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            functions.push(ParsedFunction {
+                name,
+                line_start,
+                line_end,
+                is_public,
+                is_async,
+                body_source,
+            });
+        }
+    }
 }
 
-fn extract_use(node: &Node, source: &str) -> Option<String> {
-    node.utf8_text(source.as_bytes())
-        .ok()
-        .map(|s| s.trim().trim_end_matches(';').to_owned())
-}
+fn extract_structs(source: &str, structs: &mut Vec<String>) {
+    // Match struct definitions: struct name { ... }
+    let re = Regex::new(r"(?m)^\s*(?:pub\s+)?struct\s+([a-zA-Z_]\w*)").unwrap();
 
-fn extract_name(node: &Node, source: &str) -> Option<String> {
-    node.child_by_field_name("name")
-        .and_then(|n| n.utf8_text(source.as_bytes()).ok())
-        .map(str::to_owned)
+    for line in source.lines() {
+        if let Some(caps) = re.captures(line) {
+            if let Some(name) = caps.get(1) {
+                structs.push(name.as_str().to_owned());
+            }
+        }
+    }
 }

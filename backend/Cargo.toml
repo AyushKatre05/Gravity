@@ -8,7 +8,6 @@ name = "gravity-backend"
 path = "src/main.rs"
 
 [build-dependencies]
-cc = "1.0"
 
 [dependencies]
 # Web framework
@@ -35,8 +34,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Parsing
-tree-sitter = "0.20"
-tree-sitter-rust = "0.20"
+regex = "1"
 
 # Graph
 petgraph = { version = "0.6", features = ["serde-1"] }
