@@ -1,14 +1,33 @@
+use std::env;
+use std::path::PathBuf;
+use std::process::Command;
+
 fn main() {
-    // Link against the tree-sitter libraries
-    // They are built and installed in the Docker image
-    println!("cargo:rustc-link-lib=dylib=tree_sitter");
-    println!("cargo:rustc-link-lib=dylib=tree_sitter_rust");
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     
-    println!("cargo:rustc-link-search=native=/usr/lib");
-    println!("cargo:rustc-link-search=native=/usr/lib/x86_64-linux-gnu");
-    println!("cargo:rustc-link-search=native=/usr/local/lib");
+    // Build tree-sitter-rust grammar only
+    // (tree-sitter crate handles its own compilation)
+    let ts_rust_dir = out_dir.join("tree-sitter-rust");
+    if !ts_rust_dir.exists() {
+        Command::new("git")
+            .args(&["clone", "https://github.com/tree-sitter/tree-sitter-rust.git"])
+            .arg(&ts_rust_dir)
+            .output()
+            .expect("Failed to clone tree-sitter-rust");
+    }
     
-    println!("cargo:rerun-if-changed=src");
-    println!("cargo:rerun-if-changed=Cargo.toml");
+    // Get tree-sitter include path from the tree-sitter crate
+    let ts_include = PathBuf::from(env::var("DEP_TREE_SITTER_INCLUDE").unwrap_or_else(|_| "/usr/include".to_string()));
+    
+    // Compile tree-sitter-rust parser and scanner
+    cc::Build::new()
+        .file(ts_rust_dir.join("src/parser.c"))
+        .file(ts_rust_dir.join("src/scanner.c"))
+        .include(ts_rust_dir.join("src"))
+        .include(&ts_include)
+        .compile("tree_sitter_rust");
+    
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
+    println!("cargo:rustc-link-lib=static=tree_sitter_rust");
 }
 
