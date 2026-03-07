@@ -1,16 +1,10 @@
 use tree_sitter::{Language, Node, Parser};
 use anyhow::{Context, Result};
-use std::mem;
 
 use crate::models::ParsedFunction;
 
 extern "C" {
-    fn tree_sitter_rust() -> *const std::ffi::c_void;
-}
-
-/// Safety: tree_sitter_rust() returns a valid Language pointer
-unsafe fn get_rust_language() -> Language {
-    mem::transmute(tree_sitter_rust())
+    fn tree_sitter_rust() -> *mut std::ffi::c_void;
 }
 
 const BRANCH_KINDS: &[&str] = &[
@@ -28,7 +22,19 @@ const BRANCH_KINDS: &[&str] = &[
 
 pub fn compute_complexity(func: &ParsedFunction) -> Result<usize> {
     let mut parser = Parser::new();
-    let lang = unsafe { get_rust_language() };
+    
+    // Get language from C function
+    let lang_ptr = unsafe { tree_sitter_rust() };
+    
+    if lang_ptr.is_null() {
+        tracing::error!("tree_sitter_rust() returned null pointer!");
+        return Err(anyhow::anyhow!("tree_sitter_rust() returned null pointer"));
+    }
+    
+    let lang: Language = unsafe {
+        std::mem::transmute_copy(&(lang_ptr as *const _))
+    };
+    
     parser
         .set_language(lang)
         .context("Failed to set language for complexity parser")?;

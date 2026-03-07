@@ -3,20 +3,30 @@ use anyhow::{Context, Result};
 use walkdir::WalkDir;
 use tree_sitter::{Language, Node, Parser};
 use crate::models::{ParsedFile, ParsedFunction};
-use std::mem;
 
 extern "C" {
     fn tree_sitter_rust() -> *const std::ffi::c_void;
 }
 
-/// Safety: tree_sitter_rust() returns a valid Language pointer
-unsafe fn get_rust_language() -> Language {
-    mem::transmute(tree_sitter_rust())
-}
-
 pub fn parse_directory(root_path: &str) -> Result<Vec<ParsedFile>> {
     let mut parser = Parser::new();
-    let lang = unsafe { get_rust_language() };
+    
+    // Get the language from the tree_sitter_rust C function
+    let lang_ptr = unsafe { tree_sitter_rust() };
+    
+    if lang_ptr.is_null() {
+        tracing::error!("tree_sitter_rust() returned null pointer!");
+        return Err(anyhow::anyhow!("tree_sitter_rust() returned null pointer"));
+    }
+    
+    // Safety: The C function returns a valid TSLanguage pointer
+    // We transmute it directly to Language which should have the same memory layout
+    let lang: Language = unsafe {
+        std::mem::transmute_copy(&(lang_ptr as *const _))
+    };
+    
+    tracing::info!("tree-sitter-rust language loaded successfully");
+    
     parser
         .set_language(lang)
         .context("Failed to set tree-sitter Rust language")?;
