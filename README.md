@@ -70,7 +70,7 @@ If you are on the free tier, follow these steps exactly:
     -   Go to **New +** > **Web Service** > Connect this repo.
     -   Name: `gravity-backend` | Runtime: **Docker**.
     -   **Advanced** > **Docker Build Path**: `backend/Dockerfile`.
-    -   **Advanced** > **Docker Context**: `backend` (⚠️ THIS IS THE FIX).
+    -   **Advanced** > **Docker Context**: `.` (The root folder).
     -   **Environment Variables**:
         -   `DATABASE_URL`: (Paste the URL from Step 1).
         -   `PORT`: `8080`.

@@ -13,10 +13,10 @@ RUN curl -L https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock* ./
-COPY Trunk.toml rust-toolchain.toml* ./
-COPY src ./src
-COPY index.html ./
+COPY frontend/Cargo.toml frontend/Cargo.lock* ./
+COPY frontend/Trunk.toml frontend/rust-toolchain.toml* ./
+COPY frontend/src ./src
+COPY frontend/index.html ./
 
 RUN trunk build --release
 

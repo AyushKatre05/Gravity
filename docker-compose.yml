@@ -8,8 +8,8 @@ services:
   # ── Backend ───────────────────────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgresql://neondb_owner:npg_PtKo9vMZsr8x@ep-orange-scene-ab3pw8x8-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       PORT: "8080"
@@ -26,8 +26,8 @@ services:
   # ── Frontend build (produces static files) ────────────────────────────────
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     volumes:
       - frontend-dist:/output
     networks:

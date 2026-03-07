@@ -13,15 +13,18 @@ RUN apt-get update && apt-get install -y \
     make \
     && rm -rf /var/lib/apt/lists/*
 
+# ⚠️ NOTE: This Dockerfile must be built from the project ROOT context
+# Usage: docker build -t gravity-backend -f backend/Dockerfile .
+
 WORKDIR /app
 
 # Copy manifest files
-COPY Cargo.toml ./
+COPY backend/Cargo.toml ./
 
-# Copy src and migrations
-COPY src ./src
-COPY migrations ./migrations
-COPY build.rs ./
+# Copy src, migrations and build script
+COPY backend/src ./src
+COPY backend/migrations ./migrations
+COPY backend/build.rs* ./
 
 # Build release binary
 RUN cargo build --release
@@ -58,12 +61,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENV PORT=8080
 ENV ANALYZE_PATH=/analyze
 EXPOSE 8080
-
-CMD ["gravity-backend"]
-
-EXPOSE ${PORT}
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 CMD ["gravity-backend"]
