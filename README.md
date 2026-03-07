@@ -79,7 +79,7 @@ If you are on the free tier, follow these steps exactly:
 3.  **Step 3: Create the Gateway/Frontend Service**
     -   Go to **New +** > **Web Service** > Connect this repo.
     -   Name: `gravity-gateway` | Runtime: **Docker**.
-    -   **Advanced** > **Docker Build Path**: `nginx/Dockerfile`.
+    -   **Advanced** > **Docker Build Path**: `Dockerfile.gateway`.
     -   **Advanced** > **Docker Context**: `.` (The root folder).
     -   **Environment Variables**:
         -   `BACKEND_URL`: (Paste the Internal Hostname from Step 2, e.g., `http://gravity-backend:8080`).

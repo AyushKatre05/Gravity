@@ -24,7 +24,7 @@ services:
   - type: web
     name: gravity-gateway
     runtime: docker
-    dockerfilePath: ./nginx/Dockerfile
+    dockerfilePath: Dockerfile.gateway
     dockerContext: .
     envVars:
       - key: BACKEND_URL
