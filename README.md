@@ -58,32 +58,34 @@ Choose one of the following methods to deploy to Render:
 2. Go to **New +** > **Blueprint**.
 3. Select this repo and click **Apply**.
 
-#### Option 2: Manual Manual Setup (Free Tier)
-If you are on the free tier, follow these manual steps:
+#### Option 2: Manual Setup (Render Free Tier)
+If you are on the free tier, follow these steps exactly:
 
-1.  **Create a Database**:
+1.  **Step 1: Create a PostgreSQL Database**
     -   Go to **New +** > **PostgreSQL**.
-    -   Name it `gravity-db` and choose the **Free** plan.
-    -   Copy the **Internal Database URL** once created.
+    -   Name: `gravity-db` | Plan: **Free**.
+    -   After creation, find the **Internal Database URL** on the DB's dashboard. Copy it.
 
-2.  **Create the Backend**:
-    -   Go to **New +** > **Web Service**.
-    -   Connect this repo.
-    -   **Important Settings**:
-        -   **Runtime**: `Docker`
-        -   **Docker Path**: `backend/Dockerfile`
+2.  **Step 2: Create the Backend Service**
+    -   Go to **New +** > **Web Service** > Connect this repo.
+    -   Name: `gravity-backend` | Runtime: **Docker**.
+    -   **Advanced** > **Docker Build Path**: `backend/Dockerfile`.
+    -   **Advanced** > **Docker Context**: `backend` (⚠️ THIS IS THE FIX).
     -   **Environment Variables**:
-        -   `DATABASE_URL`: (Paste your Internal Database URL)
-        -   `PORT`: `8080`
+        -   `DATABASE_URL`: (Paste the URL from Step 1).
+        -   `PORT`: `8080`.
+    -   **Wait for it to deploy.** Once green, copy the **Internal Hostname** found in the "Settings" or main dashboard (looks like `http://gravity-backend:8080`).
 
-3.  **Create the Gateway (Frontend)**:
-    -   Go to **New +** > **Web Service**.
-    -   Connect this repo.
-    -   **Important Settings**:
-        -   **Runtime**: `Docker`
-        -   **Docker Path**: `nginx/Dockerfile`
+3.  **Step 3: Create the Gateway/Frontend Service**
+    -   Go to **New +** > **Web Service** > Connect this repo.
+    -   Name: `gravity-gateway` | Runtime: **Docker**.
+    -   **Advanced** > **Docker Build Path**: `nginx/Dockerfile`.
+    -   **Advanced** > **Docker Context**: `.` (The root folder).
     -   **Environment Variables**:
-        -   `BACKEND_URL`: The **Internal Hostname** of your backend service (e.g., `http://gravity-backend:8080`). You can find this on the backend service's dashboard.
+        -   `BACKEND_URL`: (Paste the Internal Hostname from Step 2, e.g., `http://gravity-backend:8080`).
+
+4.  **Done!**
+    -   Your project is now live at the **Onrender URL** of the `gravity-gateway` service.
 
 ## 🤝 Contributing
 
