@@ -51,18 +51,39 @@ Gravity is built with a high-performance, type-safe stack:
 
 ### ☁️ Deploy to Render
 
-You can deploy Gravity directly to Render using the Blueprint feature:
+Choose one of the following methods to deploy to Render:
 
-1. **Fork this repository** to your GitHub account.
-2. **Connect your GitHub account** to Render.
-3. Click on **New +** > **Blueprint**.
-4. Select your forked **Gravity** repository.
-5. Review the plan and click **Apply**.
+#### Option 1: Render Blueprint (Easiest, may require card)
+1. **Fork this repository**.
+2. Go to **New +** > **Blueprint**.
+3. Select this repo and click **Apply**.
 
-Render will automatically provision:
-- A managed **PostgreSQL** database.
-- The **Backend** service.
-- The **Gateway** (Nginx) to serve the frontend and route API calls.
+#### Option 2: Manual Manual Setup (Free Tier)
+If you are on the free tier, follow these manual steps:
+
+1.  **Create a Database**:
+    -   Go to **New +** > **PostgreSQL**.
+    -   Name it `gravity-db` and choose the **Free** plan.
+    -   Copy the **Internal Database URL** once created.
+
+2.  **Create the Backend**:
+    -   Go to **New +** > **Web Service**.
+    -   Connect this repo.
+    -   **Important Settings**:
+        -   **Runtime**: `Docker`
+        -   **Docker Path**: `backend/Dockerfile`
+    -   **Environment Variables**:
+        -   `DATABASE_URL`: (Paste your Internal Database URL)
+        -   `PORT`: `8080`
+
+3.  **Create the Gateway (Frontend)**:
+    -   Go to **New +** > **Web Service**.
+    -   Connect this repo.
+    -   **Important Settings**:
+        -   **Runtime**: `Docker`
+        -   **Docker Path**: `nginx/Dockerfile`
+    -   **Environment Variables**:
+        -   `BACKEND_URL`: The **Internal Hostname** of your backend service (e.g., `http://gravity-backend:8080`). You can find this on the backend service's dashboard.
 
 ## 🤝 Contributing
 

@@ -22,12 +22,14 @@ RUN trunk build --release
 # 🚀 Final Stage: Nginx
 FROM nginx:alpine
 
+# Copy built files
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Replace backend host in nginx.conf if needed via entrypoint
-# But here we use the name from render.yaml 'gravity-backend'
-RUN sed -i 's/http:\/\/backend:8080/http:\/\/gravity-backend:8080/g' /etc/nginx/nginx.conf
+# Use Nginx template for dynamic BACKEND_URL substitution
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
+
+# Default backend URL (can be overridden by Render env vars)
+ENV BACKEND_URL=http://gravity-backend:8080
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
