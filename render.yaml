@@ -1,11 +1,17 @@
+databases:
+  - name: gravity-db
+    plan: free
+
 services:
-  - type: pserv
+  - type: web
     name: gravity-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: gravity-db
+          property: connectionString
       - key: RUST_LOG
         value: info
       - key: ANALYZE_PATH
@@ -13,11 +19,12 @@ services:
       - key: PORT
         value: "8080"
     healthCheckPath: /health
-    healthCheckInterval: 30
 
   - type: web
-    name: gravity-frontend
+    name: gravity-gateway
     runtime: docker
-    dockerfilePath: ./frontend/Dockerfile
-    envVars: []
-    staticSite: true
+    dockerfilePath: ./nginx/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: BACKEND_URL
+        value: http://gravity-backend:8080

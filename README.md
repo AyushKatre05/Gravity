@@ -49,6 +49,21 @@ Gravity is built with a high-performance, type-safe stack:
 3. **Access the Dashboard**:
    Open your browser and navigate to `http://localhost`.
 
+### ☁️ Deploy to Render
+
+You can deploy Gravity directly to Render using the Blueprint feature:
+
+1. **Fork this repository** to your GitHub account.
+2. **Connect your GitHub account** to Render.
+3. Click on **New +** > **Blueprint**.
+4. Select your forked **Gravity** repository.
+5. Review the plan and click **Apply**.
+
+Render will automatically provision:
+- A managed **PostgreSQL** database.
+- The **Backend** service.
+- The **Gateway** (Nginx) to serve the frontend and route API calls.
+
 ## 🤝 Contributing
 
 We are looking for help to make Gravity multi-lingual! If you are interested in adding support for your favorite programming language, please check out our [CONTRIBUTING.md](file:///c:/Users/ayush/OneDrive/Desktop/project/Gravity/CONTRIBUTING.md) guide.
