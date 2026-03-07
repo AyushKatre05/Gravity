@@ -7,6 +7,9 @@ edition = "2021"
 name = "gravity-backend"
 path = "src/main.rs"
 
+[build-dependencies]
+cc = "1.0"
+
 [dependencies]
 # Web framework
 axum = { version = "0.7", features = ["json", "macros"] }
@@ -32,8 +35,8 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Parsing
-tree-sitter = "0.24"
-tree-sitter-rust = "0.24"
+tree-sitter = "0.20"
+tree-sitter-rust = "0.20"
 
 # Graph
 petgraph = { version = "0.6", features = ["serde-1"] }
@@ -51,9 +54,6 @@ dotenvy = "0.15"
 
 # File system
 walkdir = "2"
-
-[build-dependencies]
-# nothing needed beyond standard
 
 [profile.release]
 opt-level = 3

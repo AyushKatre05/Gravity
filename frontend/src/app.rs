@@ -5,6 +5,7 @@ use leptos::{
 };
 use gloo_net::http::Request;
 use web_sys::HtmlInputElement;
+use wasm_bindgen::JsCast;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
