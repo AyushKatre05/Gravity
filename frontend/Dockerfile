@@ -20,16 +20,11 @@ COPY index.html ./
 
 RUN trunk build --release
 
-FROM nginx:alpine AS static
+# Copy built files to volume mount point
+FROM alpine:latest
 
-RUN apk add --no-cache tini
+COPY --from=builder /app/dist /dist
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+VOLUME ["/output"]
 
-EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/index.html || exit 1
-
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT sh -c "cp -r /dist/* /output/ && echo 'Frontend build copied to volume'"
