@@ -1,59 +1,34 @@
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid       /var/run/nginx.pid;
+server {
+    listen       80;
+    server_name  _;
 
-events {
-    worker_connections 1024;
-}
+    root  /usr/share/nginx/html;
+    index index.html;
 
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
+    # Frontend routes
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-    log_format main '$remote_addr - $remote_user [$time_local] '
-                    '"$request" $status $body_bytes_sent '
-                    '"$http_referer" "$http_user_agent"';
+    # API proxying
+    location /api/ {
+        proxy_pass         ${BACKEND_URL};
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
 
-    access_log /var/log/nginx/access.log main;
+    # Health check proxying
+    location /health {
+        proxy_pass ${BACKEND_URL};
+    }
 
-    sendfile        on;
-    keepalive_timeout 65;
-    gzip            on;
-    gzip_types      text/plain text/css application/json
-                    application/javascript application/wasm;
-
-    server {
-        listen       80;
-        server_name  _;
-
-        root  /usr/share/nginx/html;
-        index index.html;
-
-        # Frontend routes
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-
-        # API proxying
-        location /api/ {
-            proxy_pass         ${BACKEND_URL};
-            proxy_http_version 1.1;
-            proxy_set_header   Host              $host;
-            proxy_set_header   X-Real-IP         $remote_addr;
-            proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
-            proxy_set_header   X-Forwarded-Proto $scheme;
-            proxy_read_timeout 120s;
-        }
-
-        # Health check proxying
-        location /health {
-            proxy_pass ${BACKEND_URL};
-        }
-
-        # Cache static assets
-        location ~* \.(js|wasm|css|png|svg|ico|woff2?)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
+    # Cache static assets
+    location ~* \.(js|wasm|css|png|svg|ico|woff2?)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 }
