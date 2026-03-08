@@ -132,7 +132,7 @@ pub fn App() -> impl IntoView {
     };
 
     view! {
-        <div class="min-h-screen flex flex-col bg-transparent">
+        <div class="h-full w-full flex flex-col bg-transparent">
 
             <header class="glass sticky" style="top: 0; z-index: 50;">
                 <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
@@ -219,7 +219,7 @@ pub fn App() -> impl IntoView {
                 </div>
             </nav>
 
-            <main class="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-6 w-full">
+            <main class="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-6 w-full overflow-y-auto" style="height: 0;">
                 {move || match active_tab.get() {
                     Tab::Summary    => view! { <SummaryPanel project_id=project_id /> }.into_view(),
                     Tab::Files      => view! { <FilesPanel project_id=project_id /> }.into_view(),
@@ -228,8 +228,8 @@ pub fn App() -> impl IntoView {
                 }}
             </main>
 
-            <footer class="glass mt-auto border-t" style="border-top-color: var(--border);">
-                <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 text-center text-sm font-medium" style="color: var(--text-muted);">
+            <footer class="glass border-t flex-shrink-0" style="border-top-color: var(--border);">
+                <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center text-sm font-medium" style="color: var(--text-muted);">
                     <span class="opacity-75">"Gravity • Code Intelligence Dashboard • "</span>
                     <a href="https://github.com/AyushKatre05/Gravity" class="transition-colors hover:text-white" style="color: var(--accent-light);">{"Open Source"}</a>
                 </div>
