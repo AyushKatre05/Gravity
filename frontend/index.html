@@ -11,22 +11,38 @@
   </script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     :root {
-      --bg-primary:   #0a0e27;
-      --bg-secondary: #13182f;
-      --bg-card:      #1a2342;
-      --bg-hover:     #222d47;
-      --border:       #2d3a5a;
-      --accent:       #7c3aed;
-      --accent-light: #a78bfa;
-      --accent-darker: #5e1dd4;
-      --text-primary: #f1f5f9;
+      --bg-primary:   #070a1a;
+      --bg-secondary: rgba(19, 24, 47, 0.7);
+      --bg-card:      rgba(26, 35, 66, 0.6);
+      --bg-hover:     rgba(34, 45, 71, 0.8);
+      --border:       rgba(45, 58, 90, 0.6);
+      --accent:       #8b5cf6;
+      --accent-light: #c4b5fd;
+      --accent-darker: #6d28d9;
+      --primary-light: #818cf8;
+      --text-primary: #f8fafc;
       --text-muted:   #94a3b8;
       --success:      #10b981;
       --warning:      #f59e0b;
       --danger:       #ef4444;
+    }
+    
+    .glass {
+      background: var(--bg-secondary);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     }
 
     * { 
@@ -43,6 +59,10 @@
     body {
       font-family: 'Inter', sans-serif;
       background: var(--bg-primary);
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+      background-attachment: fixed;
       color: var(--text-primary);
       min-height: 100vh;
       overflow-x: hidden;
@@ -72,25 +92,34 @@
       font-weight: 500;
     }
 
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: -0.02em;
+    }
+
     /* Scrollbar */
     ::-webkit-scrollbar       { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-track { background: rgba(19, 24, 47, 0.5); }
     ::-webkit-scrollbar-thumb { 
-      background: var(--border); 
+      background: rgba(45, 58, 90, 0.8); 
       border-radius: 4px; 
       transition: background 0.2s;
     }
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-light); }
 
     /* Button styles */
     button {
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       font-weight: 500;
     }
 
     button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -6px rgba(139, 92, 246, 0.5);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0px);
     }
 
     button:disabled {
@@ -145,6 +174,14 @@
 
     .gradient-card {
       background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .text-gradient {
+      background: linear-gradient(to right, #c4b5fd, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     /* Badge styles */

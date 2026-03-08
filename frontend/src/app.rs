@@ -132,19 +132,19 @@ pub fn App() -> impl IntoView {
     };
 
     view! {
-        <div class="min-h-screen flex flex-col" style="background: var(--bg-primary);">
+        <div class="min-h-screen flex flex-col bg-transparent">
 
-            <header style="background: var(--bg-secondary); border-bottom: 1px solid var(--border); top: 0; z-index: 50;">
+            <header class="glass sticky" style="top: 0; z-index: 50;">
                 <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-lg flex items-center justify-center"
-                                 style="background: linear-gradient(135deg, #7c3aed, #4f46e5); flex-shrink: 0;">
-                                <span class="text-xl">"[G]"</span>
+                                 style="background: linear-gradient(135deg, #8b5cf6, #6366f1); flex-shrink: 0; box-shadow: 0 4px 12px rgba(139,92,246,0.3);">
+                                <span class="text-xl font-bold font-heading text-white">"G"</span>
                             </div>
                             <div>
-                                <h1 class="text-2xl font-bold" style="color: var(--text-primary);">"Gravity"</h1>
-                                <p class="text-xs" style="color: var(--text-muted);">"Code Intelligence Dashboard"</p>
+                                <h1 class="text-2xl font-bold font-heading text-gradient">"Gravity"</h1>
+                                <p class="text-xs font-medium tracking-wide" style="color: var(--text-muted); opacity: 0.8;">"Code Intelligence Dashboard"</p>
                             </div>
                         </div>
 
@@ -161,15 +161,15 @@ pub fn App() -> impl IntoView {
                                         }
                                     }
                                     prop:value=github_url
-                                    class="w-full md:w-64 px-3 py-2 rounded-lg text-sm transition-all"
-                                    style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary);"
+                                    class="w-full md:w-64 px-4 py-2.5 rounded-lg text-sm transition-all outline-none focus:ring-2 focus:ring-purple-500/50"
+                                    style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: var(--text-primary); backdrop-filter: blur(8px);"
                                 />
                             </div>
                             <button
                                 on:click=run_analyze
                                 disabled=analyzing
-                                class="px-4 md:px-5 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
-                                style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white;"
+                                class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
+                                style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white;"
                             >
                                 {move || if analyzing.get() { "Analyzing..." } else { "Analyze" }}
                             </button>
@@ -193,9 +193,8 @@ pub fn App() -> impl IntoView {
                 </div>
             </header>
 
-            <nav class="sticky top-14 md:relative max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-6 z-40">
-                <div class="flex gap-1 p-1 rounded-lg w-full overflow-x-auto"
-                     style="background: var(--bg-secondary); border: 1px solid var(--border);">
+            <nav class="sticky top-14 md:relative max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-8 z-40">
+                <div class="glass flex gap-2 p-1.5 rounded-xl w-full overflow-x-auto shadow-lg">
                     {[
                         (Tab::Summary,    "Summary"),
                         (Tab::Files,      "Files"),
@@ -206,12 +205,12 @@ pub fn App() -> impl IntoView {
                         view! {
                             <button
                                 on:click=move |_| set_tab.set(tab_clone.clone())
-                                class="px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap"
+                                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap hover:bg-white/5"
                                 style=move || {
                                     if active_tab.get() == tab.clone() {
-                                        "background: var(--accent); color: white;"
+                                        "background: rgba(139, 92, 246, 0.2); color: white; border: 1px solid rgba(139, 92, 246, 0.4);"
                                     } else {
-                                        "color: var(--text-muted); background: transparent;"
+                                        "color: var(--text-muted); background: transparent; border: 1px solid transparent;"
                                     }
                                 }
                             >{label}</button>
@@ -229,10 +228,10 @@ pub fn App() -> impl IntoView {
                 }}
             </main>
 
-            <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border); margin-top: auto;">
-                <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center text-xs" style="color: var(--text-muted);">
-                    "Gravity v1.0 • Code Analysis Dashboard • "
-                    <a href="https://github.com/ayush/gravity" style="color: var(--accent);">{"Open Source"}</a>
+            <footer class="glass mt-auto border-t" style="border-top-color: var(--border);">
+                <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 text-center text-sm font-medium" style="color: var(--text-muted);">
+                    <span class="opacity-75">"Gravity • Code Intelligence Dashboard • "</span>
+                    <a href="https://github.com/AyushKatre05/Gravity" class="transition-colors hover:text-white" style="color: var(--accent-light);">{"Open Source"}</a>
                 </div>
             </footer>
         </div>
@@ -257,33 +256,39 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
             <Suspense fallback=move || view! { <LoadingCard /> }>
                 {move || summary.get().flatten().map(|s| view! {
                     <div>
-                        <div class="mb-6">
-                            <h2 class="text-2xl font-bold" style="color: var(--text-primary);">
+                        <div class="mb-8 pl-1">
+                            <h2 class="text-3xl font-bold font-heading text-white">
                                 {s.project_name.clone()}
                             </h2>
-                            <p class="text-sm mt-1" style="color: var(--text-muted);">"Project analysis results"</p>
+                            <p class="text-sm mt-2 font-medium" style="color: var(--text-muted);">"Project analysis results"</p>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
-                            <StatCard label="Files" value=s.total_files.to_string() icon="[F]" />
-                            <StatCard label="Functions" value=s.total_functions.to_string() icon="[Fn]" />
-                            <StatCard label="Imports" value=s.total_imports.to_string() icon="[I]" />
-                            <StatCard label="Avg Complexity"
-                                      value=format!("{:.1}", s.avg_complexity) icon="[C]" />
+                        <div class="grid grid-cols-2 gap-4 mb-8 lg:grid-cols-4">
+                            <StatCard label="Files" value=s.total_files.to_string() icon="📄" />
+                            <StatCard label="Functions" value=s.total_functions.to_string() icon="⚡" />
+                            <StatCard label="Imports" value=s.total_imports.to_string() icon="📦" />
+                            <StatCard label="Avg Complexity" 
+                                      value=format!("{:.1}", s.avg_complexity) icon="🧠" />
                         </div>
-                        <div class="grid gap-4 lg:grid-cols-2">
-                            <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
-                                <h3 class="font-semibold mb-3" style="color: var(--accent-light);">[ARCH] Architecture Notes</h3>
-                                <ul class="space-y-2">
+                        <div class="grid gap-6 lg:grid-cols-2">
+                            <div class="glass-card p-6 rounded-2xl">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="text-xl">"🏛️"</span>
+                                    <h3 class="font-semibold font-heading text-lg" style="color: var(--accent-light);">"Architecture Notes"</h3>
+                                </div>
+                                <ul class="space-y-3">
                                     {s.architecture_notes.iter().map(|n| view! {
-                                        <li class="text-sm flex gap-2">
-                                            <span style="color: var(--accent);">">"</span>
-                                            <span style="color: var(--text-primary);">{n.clone()}</span>
+                                        <li class="text-sm flex gap-3 items-start animate-fadeIn">
+                                            <span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style="background: var(--accent);"></span>
+                                            <span style="color: var(--text-primary); opacity: 0.9;">{n.clone()}</span>
                                         </li>
                                     }).collect_view()}
                                 </ul>
                             </div>
-                            <div class="p-5 rounded-xl" style="background: var(--bg-card); border: 1px solid var(--border);">
-                                <h3 class="font-semibold mb-3" style="color: var(--warning);">[DEAD] Dead Code Candidates</h3>
+                            <div class="glass-card p-6 rounded-2xl">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="text-xl">"⚠️"</span>
+                                    <h3 class="font-semibold font-heading text-lg" style="color: var(--warning);">"Dead Code Candidates"</h3>
+                                </div>
                                 {if s.dead_code_candidates.is_empty() {
                                     view! { <p class="text-sm" style="color: var(--success);">[OK] No dead code detected.</p> }.into_view()
                                 } else {
@@ -340,28 +345,28 @@ fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                     view! { <EmptyState icon="[FILE]" title="No files found" hint="Run analysis first." /> }.into_view()
                 } else {
                     view! {
-                        <div class="rounded-xl overflow-hidden" style="border: 1px solid var(--border);">
+                        <div class="glass-card rounded-2xl overflow-hidden shadow-xl animate-fadeIn">
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr style="background: var(--bg-secondary);">
-                                        <th class="text-left px-4 py-3 font-semibold" style="color: var(--text-muted);">"File Path"</th>
-                                        <th class="text-left px-4 py-3 font-semibold" style="color: var(--text-muted);">"Module"</th>
-                                        <th class="text-right px-4 py-3 font-semibold" style="color: var(--text-muted);">"Lines"</th>
+                                    <tr class="glass">
+                                        <th class="text-left px-6 py-4 font-semibold font-heading" style="color: var(--text-muted);">"File Path"</th>
+                                        <th class="text-left px-6 py-4 font-semibold font-heading" style="color: var(--text-muted);">"Module"</th>
+                                        <th class="text-right px-6 py-4 font-semibold font-heading" style="color: var(--text-muted);">"Lines"</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {fs.iter().enumerate().map(|(i, f)| {
-                                        let bg = if i % 2 == 0 { "var(--bg-card)" } else { "var(--bg-secondary)" };
+                                        let bg = if i % 2 == 0 { "rgba(30, 41, 59, 0.3)" } else { "rgba(15, 23, 42, 0.3)" };
                                         let row_style = format!("background: {};", bg);
                                         view! {
-                                            <tr style=row_style>
-                                                <td class="px-4 py-2 mono" style="color: var(--accent-light); font-size: 0.8rem;">
+                                            <tr style=row_style class="transition-colors hover:bg-white/5">
+                                                <td class="px-6 py-3 mono" style="color: var(--accent-light); font-size: 0.85rem;">
                                                     {f.path.clone()}
                                                 </td>
-                                                <td class="px-4 py-2" style="color: var(--text-muted);">
+                                                <td class="px-6 py-3 font-medium" style="color: var(--text-muted); opacity: 0.9;">
                                                     {f.module_name.clone().unwrap_or_default()}
                                                 </td>
-                                                <td class="px-4 py-2 text-right mono" style="color: var(--text-primary);">
+                                                <td class="px-6 py-3 text-right mono font-bold" style="color: var(--text-primary);">
                                                     {f.line_count}
                                                 </td>
                                             </tr>
@@ -401,45 +406,46 @@ fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                 let edges_json = serde_json::to_string(&g.edges).unwrap_or_default();
 
                 let script_content = format!(r#"
-                    (function() {{
+                    setTimeout(function() {{
                         var rawNodes = {nodes_json};
                         var rawEdges = {edges_json};
                         var nodes = new vis.DataSet(rawNodes.map(function(n) {{
-                            var color = n.kind === 'file' ? '#7c3aed' : n.kind === 'module' ? '#4f46e5' : '#374151';
-                            return {{ id: n.id, label: n.label, color: {{ background: color, border: '#a78bfa' }},
-                                     font: {{ color: '#e6edf3', size: 13 }}, shape: 'box',
-                                     borderWidth: 1, shadow: true }};
+                            var color = n.kind === 'file' ? '#8b5cf6' : n.kind === 'module' ? '#6366f1' : '#475569';
+                            return {{ id: n.id, label: n.label, color: {{ background: color, border: '#c4b5fd' }},
+                                     font: {{ color: '#f8fafc', size: 14 }}, shape: 'box',
+                                     borderWidth: 1.5, shadow: {{ enabled: true, color: 'rgba(0,0,0,0.4)', size: 10 }} }};
                         }}));
                         var edges = new vis.DataSet(rawEdges.map(function(e) {{
                             return {{ from: e.from, to: e.to, arrows: 'to',
-                                     color: {{ color: '#4b5563', highlight: '#7c3aed' }},
+                                     color: {{ color: '#64748b', highlight: '#a855f7' }},
                                      smooth: {{ type: 'cubicBezier' }} }};
                         }}));
                         var container = document.getElementById('graph-container');
                         if (container) {{
                             new vis.Network(container, {{ nodes: nodes, edges: edges }}, {{
                                 layout: {{ improvedLayout: true }},
-                                physics: {{ barnesHut: {{ gravitationalConstant: -3000 }} }},
-                                interaction: {{ hover: true, tooltipDelay: 100 }}
+                                physics: {{ barnesHut: {{ gravitationalConstant: -3000, springLength: 150 }} }},
+                                interaction: {{ hover: true, tooltipDelay: 100, zoomSpeed: 0.8 }}
                             }});
                         }}
-                    }})();
+                    }}, 50);
                 "#);
+                
+                let _ = js_sys::eval(&script_content);
 
                 view! {
-                    <div>
-                        <div class="mb-4 flex items-center gap-4">
-                            <span class="text-sm px-3 py-1 rounded-full"
-                                  style="background: rgba(124,58,237,0.2); color: var(--accent-light);">
+                    <div class="animate-fadeIn">
+                        <div class="mb-5 flex items-center gap-4">
+                            <span class="text-sm px-4 py-1.5 rounded-full font-medium shadow-sm transition-all"
+                                  style="background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.3); color: var(--accent-light);">
                                 {format!("{} nodes", g.nodes.len())}
                             </span>
-                            <span class="text-sm px-3 py-1 rounded-full"
-                                  style="background: rgba(124,58,237,0.1); color: var(--text-muted);">
+                            <span class="text-sm px-4 py-1.5 rounded-full font-medium shadow-sm transition-all"
+                                  style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.2); color: var(--primary-light);">
                                 {format!("{} edges", g.edges.len())}
                             </span>
                         </div>
-                        <div id="graph-container"></div>
-                        <script dangerously_set_inner_html=script_content />
+                        <div id="graph-container" class="shadow-2xl transition-all duration-300 hover:shadow-purple-500/10"></div>
                     </div>
                 }.into_view()
             })}
