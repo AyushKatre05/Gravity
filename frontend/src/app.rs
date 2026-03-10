@@ -134,16 +134,16 @@ pub fn App() -> impl IntoView {
     view! {
         <div class="h-full w-full flex flex-col bg-transparent">
 
-            <header class="glass sticky" style="top: 0; z-index: 50;">
+            <header class="sticky" style="background: var(--bg-primary); border-bottom: 1px solid var(--border); top: 0; z-index: 50;">
                 <div class="max-w-7xl mx-auto px-4 md:px-6 py-4">
                     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg flex items-center justify-center"
-                                 style="background: linear-gradient(135deg, #8b5cf6, #6366f1); flex-shrink: 0; box-shadow: 0 4px 12px rgba(139,92,246,0.3);">
-                                <span class="text-xl font-bold font-heading text-white">"G"</span>
+                            <div class="w-10 h-10 flex items-center justify-center"
+                                 style="background: var(--accent); flex-shrink: 0; border: 1px solid var(--text-primary);">
+                                <span class="text-xl font-bold font-heading" style="color: var(--text-primary);">"G"</span>
                             </div>
                             <div>
-                                <h1 class="text-2xl font-bold font-heading text-gradient">"Gravity"</h1>
+                                <h1 class="text-2xl font-bold font-heading" style="color: var(--text-primary);">"Gravity"</h1>
                                 <p class="text-xs font-medium tracking-wide" style="color: var(--text-muted); opacity: 0.8;">"Code Intelligence Dashboard"</p>
                             </div>
                         </div>
@@ -161,15 +161,15 @@ pub fn App() -> impl IntoView {
                                         }
                                     }
                                     prop:value=github_url
-                                    class="w-full md:w-64 px-4 py-2.5 rounded-lg text-sm transition-all outline-none focus:ring-2 focus:ring-purple-500/50"
-                                    style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: var(--text-primary); backdrop-filter: blur(8px);"
+                                    class="w-full md:w-64 px-4 py-2.5 text-sm transition-all focus:ring-1 focus:ring-purple-500"
+                                    style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); border-radius: 0;"
                                 />
                             </div>
                             <button
                                 on:click=run_analyze
                                 disabled=analyzing
-                                class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
-                                style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white;"
+                                class="px-4 md:px-6 py-2.5 text-sm font-semibold transition-all whitespace-nowrap"
+                                style="background: var(--accent); color: var(--text-primary); border: 1px solid var(--text-primary); border-radius: 0;"
                             >
                                 {move || if analyzing.get() { "Analyzing..." } else { "Analyze" }}
                             </button>
@@ -194,7 +194,7 @@ pub fn App() -> impl IntoView {
             </header>
 
             <nav class="sticky top-14 md:relative max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-8 z-40">
-                <div class="glass flex gap-2 p-1.5 rounded-xl w-full overflow-x-auto shadow-lg">
+                <div class="flex gap-2 p-1.5 w-full overflow-x-auto" style="background: var(--bg-secondary); border: 1px solid var(--border);">
                     {[
                         (Tab::Summary,    "Summary"),
                         (Tab::Files,      "Files"),
@@ -205,10 +205,10 @@ pub fn App() -> impl IntoView {
                         view! {
                             <button
                                 on:click=move |_| set_tab.set(tab_clone.clone())
-                                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap hover:bg-white/5"
+                                class="px-4 py-2 text-sm font-semibold transition-all whitespace-nowrap hover:bg-neutral-900"
                                 style=move || {
                                     if active_tab.get() == tab.clone() {
-                                        "background: rgba(139, 92, 246, 0.2); color: white; border: 1px solid rgba(139, 92, 246, 0.4);"
+                                        "background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border);"
                                     } else {
                                         "color: var(--text-muted); background: transparent; border: 1px solid transparent;"
                                     }
@@ -228,10 +228,10 @@ pub fn App() -> impl IntoView {
                 }}
             </main>
 
-            <footer class="glass border-t flex-shrink-0" style="border-top-color: var(--border);">
+            <footer class="flex-shrink-0" style="background: var(--bg-secondary); border-top: 1px solid var(--border);">
                 <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center text-sm font-medium" style="color: var(--text-muted);">
                     <span class="opacity-75">"Gravity • Code Intelligence Dashboard • "</span>
-                    <a href="https://github.com/AyushKatre05/Gravity" class="transition-colors hover:text-white" style="color: var(--accent-light);">{"Open Source"}</a>
+                    <a href="https://github.com/AyushKatre05/Gravity" class="transition-colors" style="color: var(--text-primary);">{"Open Source"}</a>
                 </div>
             </footer>
         </div>
@@ -257,7 +257,7 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                 {move || summary.get().flatten().map(|s| view! {
                     <div>
                         <div class="mb-8 pl-1">
-                            <h2 class="text-3xl font-bold font-heading text-white">
+                            <h2 class="text-3xl font-bold font-heading" style="color: var(--text-primary);">
                                 {s.project_name.clone()}
                             </h2>
                             <p class="text-sm mt-2 font-medium" style="color: var(--text-muted);">"Project analysis results"</p>
@@ -270,24 +270,24 @@ fn SummaryPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                                       value=format!("{:.1}", s.avg_complexity) icon="🧠" />
                         </div>
                         <div class="grid gap-6 lg:grid-cols-2">
-                            <div class="glass-card p-6 rounded-2xl">
+                            <div class="p-6" style="background: var(--bg-card); border: 1px solid var(--border);">
                                 <div class="flex items-center gap-2 mb-4">
                                     <span class="text-xl">"🏛️"</span>
-                                    <h3 class="font-semibold font-heading text-lg" style="color: var(--accent-light);">"Architecture Notes"</h3>
+                                    <h3 class="font-semibold font-heading text-lg" style="color: var(--text-primary);">"Architecture Notes"</h3>
                                 </div>
                                 <ul class="space-y-3">
                                     {s.architecture_notes.iter().map(|n| view! {
                                         <li class="text-sm flex gap-3 items-start animate-fadeIn">
-                                            <span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style="background: var(--accent);"></span>
-                                            <span style="color: var(--text-primary); opacity: 0.9;">{n.clone()}</span>
+                                            <span class="mt-1.5 w-1.5 h-1.5 rounded-none flex-shrink-0" style="background: var(--text-primary);"></span>
+                                            <span style="color: var(--text-muted); opacity: 0.9;">{n.clone()}</span>
                                         </li>
                                     }).collect_view()}
                                 </ul>
                             </div>
-                            <div class="glass-card p-6 rounded-2xl">
+                            <div class="p-6" style="background: var(--bg-card); border: 1px solid var(--border);">
                                 <div class="flex items-center gap-2 mb-4">
                                     <span class="text-xl">"⚠️"</span>
-                                    <h3 class="font-semibold font-heading text-lg" style="color: var(--warning);">"Dead Code Candidates"</h3>
+                                    <h3 class="font-semibold font-heading text-lg" style="color: var(--text-primary);">"Dead Code Candidates"</h3>
                                 </div>
                                 {if s.dead_code_candidates.is_empty() {
                                     view! { <p class="text-sm" style="color: var(--success);">[OK] No dead code detected.</p> }.into_view()
@@ -345,10 +345,10 @@ fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                     view! { <EmptyState icon="[FILE]" title="No files found" hint="Run analysis first." /> }.into_view()
                 } else {
                     view! {
-                        <div class="glass-card rounded-2xl overflow-hidden shadow-xl animate-fadeIn">
+                        <div class="overflow-hidden animate-fadeIn" style="border: 1px solid var(--border); background: var(--bg-card);">
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr class="glass">
+                                    <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--border);">
                                         <th class="text-left px-6 py-4 font-semibold font-heading" style="color: var(--text-muted);">"File Path"</th>
                                         <th class="text-left px-6 py-4 font-semibold font-heading" style="color: var(--text-muted);">"Module"</th>
                                         <th class="text-right px-6 py-4 font-semibold font-heading" style="color: var(--text-muted);">"Lines"</th>
@@ -356,11 +356,11 @@ fn FilesPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                                 </thead>
                                 <tbody>
                                     {fs.iter().enumerate().map(|(i, f)| {
-                                        let bg = if i % 2 == 0 { "rgba(30, 41, 59, 0.3)" } else { "rgba(15, 23, 42, 0.3)" };
+                                        let bg = if i % 2 == 0 { "var(--bg-primary)" } else { "var(--bg-card)" };
                                         let row_style = format!("background: {};", bg);
                                         view! {
-                                            <tr style=row_style class="transition-colors hover:bg-white/5">
-                                                <td class="px-6 py-3 mono" style="color: var(--accent-light); font-size: 0.85rem;">
+                                            <tr style=row_style class="transition-colors hover:bg-neutral-900 border-b border-neutral-800">
+                                                <td class="px-6 py-3 mono" style="color: var(--text-primary); font-size: 0.85rem;">
                                                     {f.path.clone()}
                                                 </td>
                                                 <td class="px-6 py-3 font-medium" style="color: var(--text-muted); opacity: 0.9;">
@@ -410,14 +410,16 @@ fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                         var rawNodes = {nodes_json};
                         var rawEdges = {edges_json};
                         var nodes = new vis.DataSet(rawNodes.map(function(n) {{
-                            var color = n.kind === 'file' ? '#8b5cf6' : n.kind === 'module' ? '#6366f1' : '#475569';
-                            return {{ id: n.id, label: n.label, color: {{ background: color, border: '#c4b5fd' }},
-                                     font: {{ color: '#f8fafc', size: 14 }}, shape: 'box',
-                                     borderWidth: 1.5, shadow: {{ enabled: true, color: 'rgba(0,0,0,0.4)', size: 10 }} }};
+                            var color = n.kind === 'file' ? '#000000' : n.kind === 'module' ? '#ffffff' : '#111111';
+                            var fontColor = n.kind === 'module' ? '#000000' : '#ffffff';
+                            var borderColor = '#8b5cf6';
+                            return {{ id: n.id, label: n.label, color: {{ background: color, border: borderColor }},
+                                     font: {{ color: fontColor, size: 14 }}, shape: 'square',
+                                     borderWidth: 2 }};
                         }}));
                         var edges = new vis.DataSet(rawEdges.map(function(e) {{
                             return {{ from: e.from, to: e.to, arrows: 'to',
-                                     color: {{ color: '#64748b', highlight: '#a855f7' }},
+                                     color: {{ color: '#333333', highlight: '#ffffff' }},
                                      smooth: {{ type: 'cubicBezier' }} }};
                         }}));
                         var container = document.getElementById('graph-container');
@@ -436,16 +438,16 @@ fn GraphPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                 view! {
                     <div class="animate-fadeIn">
                         <div class="mb-5 flex items-center gap-4">
-                            <span class="text-sm px-4 py-1.5 rounded-full font-medium shadow-sm transition-all"
-                                  style="background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.3); color: var(--accent-light);">
+                            <span class="text-sm px-4 py-1.5 font-bold transition-all"
+                                  style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary);">
                                 {format!("{} nodes", g.nodes.len())}
                             </span>
-                            <span class="text-sm px-4 py-1.5 rounded-full font-medium shadow-sm transition-all"
-                                  style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.2); color: var(--primary-light);">
+                            <span class="text-sm px-4 py-1.5 font-bold transition-all"
+                                  style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);">
                                 {format!("{} edges", g.edges.len())}
                             </span>
                         </div>
-                        <div id="graph-container" class="shadow-2xl transition-all duration-300 hover:shadow-purple-500/10"></div>
+                        <div id="graph-container" style="border-radius: 0;"></div>
                     </div>
                 }.into_view()
             })}
@@ -518,7 +520,7 @@ fn ComplexityPanel(project_id: ReadSignal<Option<String>>) -> impl IntoView {
                                                 {line_range}
                                             </td>
                                             <td class="px-4 py-2 text-center">
-                                                <span class="px-2 py-1 rounded-md text-xs font-bold mono"
+                                                <span class="px-2 py-1 text-xs font-bold mono"
                                                       style=score_style>
                                                     {item.score}
                                                 </span>
@@ -543,17 +545,17 @@ fn StatCard(
     #[prop(optional)] subtitle: Option<&'static str>,
 ) -> impl IntoView {
     view! {
-        <div class="p-4 md:p-6 rounded-xl card-hover" style="background: var(--bg-card); border: 1px solid var(--border);">
+        <div class="p-4 md:p-6 card-hover" style="background: var(--bg-card); border: 1px solid var(--border);">
             <div class="flex items-start gap-3 mb-3">
-                <span class="text-2xl md:text-3xl">{icon}</span>
+                <span class="text-2xl md:text-3xl" style="color: var(--text-primary);">{icon}</span>
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">{label}</p>
+                    <p class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">{label}</p>
                     {subtitle.map(|s| view! {
                         <p class="text-xs" style="color: var(--text-muted); margin-top: 2px;">{s}</p>
                     })}
                 </div>
             </div>
-            <div class="text-3xl md:text-4xl font-bold" style="color: var(--accent-light);">{value}</div>
+            <div class="text-3xl md:text-4xl font-bold font-heading" style="color: var(--text-primary);">{value}</div>
         </div>
     }
 }
